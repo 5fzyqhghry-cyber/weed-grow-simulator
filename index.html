@@ -37,28 +37,31 @@
       background: linear-gradient(180deg, #0a1a0a, #0d1a0d 40%, #1a2a1a);
     }
     .snoop-high {
-      animation: snoopShake 0.08s ease-in-out infinite alternate, snoopFlash 0.15s ease-in-out infinite alternate;
+      animation: snoopMelt 2.5s ease-in-out infinite alternate;
+      filter: blur(2.5px) saturate(1.4) hue-rotate(15deg);
+      transform-origin: center center;
     }
-    @keyframes snoopShake {
-      0% { transform: translateX(-3px); }
-      100% { transform: translateX(3px); }
-    }
-    @keyframes snoopFlash {
-      0% { opacity: 1; }
-      50% { opacity: 0.3; }
-      100% { opacity: 1; }
+    @keyframes snoopMelt {
+      0%   { filter: blur(1.5px) saturate(1.2) hue-rotate(0deg);   transform: scale(1) skewX(0deg); opacity: 0.95; }
+      50%  { filter: blur(4px)   saturate(1.6) hue-rotate(25deg);  transform: scale(1.04) skewX(2deg); opacity: 0.75; }
+      100% { filter: blur(2px)   saturate(1.3) hue-rotate(10deg);  transform: scale(0.98) skewX(-1.5deg); opacity: 0.85; }
     }
     .snoop-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(139, 69, 19, 0.12);
+      background: radial-gradient(ellipse at center, rgba(120, 80, 20, 0.18), rgba(40, 20, 60, 0.25));
       pointer-events: none;
       z-index: 999;
       display: none;
+      backdrop-filter: blur(1px);
     }
     .snoop-overlay.active {
       display: block;
-      animation: snoopFlash 0.15s ease-in-out infinite alternate;
+      animation: snoopFog 4s ease-in-out infinite alternate;
+    }
+    @keyframes snoopFog {
+      0%   { opacity: 0.7; }
+      100% { opacity: 1; }
     }
     .snoop-popup {
       position: fixed;
@@ -84,10 +87,21 @@
       transform: translateX(-50%) scale(1);
     }
     .snoop-popup .snoop-avatar {
-      font-size: 64px;
       display: block;
-      margin-bottom: 4px;
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid #d7a86e;
+      box-shadow: 0 0 20px rgba(215, 168, 110, 0.45);
       animation: snoopFloat 2s ease-in-out infinite;
+      background: #2a1810;
+    }
+    .snoop-popup .snoop-avatar svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
     @keyframes snoopFloat {
       0%,
@@ -828,9 +842,33 @@
 
   <div class="snoop-overlay" id="snoopOverlay"></div>
   <div class="snoop-popup" id="snoopPopup">
-    <span class="snoop-avatar">🐶</span>
+    <div class="snoop-avatar"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#3e2723"/>
+  <!-- face -->
+  <ellipse cx="50" cy="52" rx="28" ry="32" fill="#6d4c41"/>
+  <!-- hair / braids top -->
+  <path d="M22,40 Q20,15 35,12 Q50,5 65,12 Q80,15 78,40" fill="#1a120e"/>
+  <!-- left braid -->
+  <path d="M28,38 Q18,55 22,75 Q24,82 28,78 Q26,60 32,42 Z" fill="#1a120e"/>
+  <path d="M24,70 Q22,85 26,92" stroke="#0d0908" stroke-width="3" fill="none"/>
+  <!-- right braid -->
+  <path d="M72,38 Q82,55 78,75 Q76,82 72,78 Q74,60 68,42 Z" fill="#1a120e"/>
+  <!-- sunglasses -->
+  <rect x="28" y="42" width="18" height="12" rx="3" fill="#111"/>
+  <rect x="54" y="42" width="18" height="12" rx="3" fill="#111"/>
+  <rect x="46" y="45" width="8" height="3" fill="#222"/>
+  <rect x="30" y="44" width="14" height="4" rx="1" fill="#333" opacity="0.5"/>
+  <rect x="56" y="44" width="14" height="4" rx="1" fill="#333" opacity="0.5"/>
+  <!-- nose -->
+  <ellipse cx="50" cy="58" rx="4" ry="5" fill="#5d4037"/>
+  <!-- mustache / goatee -->
+  <path d="M40,64 Q50,70 60,64 Q55,68 50,69 Q45,68 40,64" fill="#1a120e"/>
+  <path d="M47,69 Q50,82 53,69 Q50,78 47,69" fill="#1a120e"/>
+  <!-- slight smile -->
+  <path d="M42,66 Q50,72 58,66" stroke="#4e342e" stroke-width="1.5" fill="none"/>
+</svg></div>
     <div class="snoop-text">🍁 Снуп Догг тут!</div>
-    <div class="snoop-sub">"Эй, братан! Попробуй мою убойную травку — экран будет трястись 30 секунд! И 50$ твои!"</div>
+    <div class="snoop-sub">"Эй, братан! Попробуй мою убойную травку — иконки поплывут на 30 сек. И 50$ твои!"</div>
     <div>
       <button class="snoop-btn" onclick="acceptSnoop()">🔥 ДАВАЙ!</button>
       <button class="snoop-btn snoop-btn-secondary" onclick="rejectSnoop()">Не сегодня</button>
@@ -850,6 +888,7 @@
     <div class="modal">
       <div class="modal-title" id="sellTitle">💰 Продажа</div>
       <div id="sellInfo" style="text-align:center;font-size:13px;margin-bottom:6px;"></div>
+      <div id="sell-buyers" style="margin-bottom:8px;max-height:160px;overflow-y:auto;"></div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0">
         <button class="btn btn-secondary btn-small" onclick="changeSellQty(-10)">-10</button>
         <button class="btn btn-secondary btn-small" onclick="changeSellQty(-1)">-1</button>
@@ -966,6 +1005,7 @@
 
     <div class="section" id="section-market">
       <div style="background:rgba(10,20,10,0.8);border-radius:10px;padding:8px;border:1px solid rgba(255,215,0,0.05)">
+        <div id="buyers-panel" style="margin-bottom:8px;"></div>
         <div class="market-grid" id="market-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px"></div>
         <div class="market-timer" id="market-timer">🔄 Обновление через: 00:00</div>
       </div>
@@ -1171,7 +1211,7 @@
           <div class="admin-section-title">⚙️ Режимы</div>
           <div class="admin-grid">
             <button class="btn btn-small" id="btn-godmode" onclick="adminToggleGod()">👁 God Mode</button>
-            <button class="btn btn-small" onclick="adminForceSnoop()">🐶 Снуп</button>
+            <button class="btn btn-small" onclick="adminForceSnoop()">😎 Снуп</button>
             <button class="btn btn-small" onclick="adminTriggerPolice()">👮 Полиция</button>
             <button class="btn btn-small" style="background:#e53935;" onclick="adminResetGame()">💀 Сброс игры</button>
           </div>
@@ -1322,6 +1362,26 @@
       { id: 'hot', emoji: '🔥', name: 'Жара', speedMult: 0.9, waterMult: 2.0 }
     ];
 
+
+    // Покупатели — уровни игрока + отношения
+    // minLevel: минимальный уровень игрока чтобы разблокировать
+    // mult: базовый множитель цены
+    const BUYERS = [
+      { id: 'vasya',  emoji: '🧔', name: 'Вася',      mood: 'Скуп',     mult: 0.85, minLevel: 1,  prefers: ['skunk', 'haze'],       hates: ['glue'],     desc: 'Берёт дёшево, любит классику' },
+      { id: 'sergey', emoji: '🧑‍💼', name: 'Сергей', mood: 'Бизнес',  mult: 1.00, minLevel: 1,  prefers: [],                      hates: [],          desc: 'Рыночная цена на всё' },
+      { id: 'dimon',  emoji: '😎', name: 'Димон',     mood: 'Тусовщик', mult: 1.10, minLevel: 3,  prefers: ['runtz', 'zkittlez', 'gelato'], hates: [], desc: 'Любит яркие сорта' },
+      { id: 'igor',   emoji: '🕵️', name: 'Игорь',     mood: 'Параноик', mult: 1.15, minLevel: 5,  prefers: ['widow', 'lemon'],      hates: ['haze'],    desc: 'Только «чистые» сорта' },
+      { id: 'olya',   emoji: '💃', name: 'Оля',       mood: 'Модница',  mult: 1.20, minLevel: 7,  prefers: ['wedding', 'gelato', 'cookies'], hates: ['glue'], desc: 'Топ-сорта, хорошая цена' },
+      { id: 'lena',   emoji: '👩', name: 'Лена',      mood: 'Ценитель', mult: 1.25, minLevel: 10, prefers: ['widow', 'blue'],       hates: ['cheese'],   desc: 'Платит больше за премиум' },
+      { id: 'petr',   emoji: '🤠', name: 'Петя',      mood: 'Оптовик',  mult: 0.95, minLevel: 12, prefers: ['kush', 'cookies'],     hates: [],          desc: 'Берёт много, стабильно' },
+      { id: 'masha',  emoji: '🧙‍♀️', name: 'Маша',  mood: 'Химик',   mult: 1.35, minLevel: 15, prefers: ['alien', 'og', 'glue'],  hates: ['skunk'],   desc: 'Переплачивает за крепкое' },
+      { id: 'boss',   emoji: '👑', name: 'Босс',      mood: 'Элита',    mult: 1.50, minLevel: 20, prefers: ['glue', 'kush', 'runtz'], hates: [],       desc: 'Лучшие цены, только для профи' },
+      { id: 'diplomat', emoji: '🕶', name: 'Дипломат', mood: 'VIP',     mult: 1.65, minLevel: 30, prefers: ['wedding', 'gelato', 'zkittlez'], hates: [], desc: 'Эксклюзив, огромные чеки' }
+    ];
+
+    // XP до следующего уровня отношений с покупателем
+    const BUYER_REL_XP = [0, 300, 800, 1800, 3500, 6000, 10000, 16000, 25000, 40000];
+
     // ============================================================
     // ====== СОСТОЯНИЕ ======
     // ============================================================
@@ -1369,7 +1429,10 @@
       investments: [],
       pestsKilled: 0,
       // Для новой системы ценообразования
-      marketSaturation: 1.0 // 1.0 = норма, >1 = перенасыщение, <1 = дефицит
+      marketSaturation: 1.0,
+      activeBuyers: [],
+      buyerRefreshAt: 0,
+      buyerRelations: {}
     };
     let selectedPotId = null;
     let selectedCrossList = [];
@@ -1529,6 +1592,8 @@
       if (!state.investments) state.investments = [];
       if (!state.pestsKilled) state.pestsKilled = 0;
       if (!state.marketSaturation) state.marketSaturation = 1.0;
+      if (!state.buyerRelations) state.buyerRelations = {};
+      if (!state.activeBuyers) state.activeBuyers = [];
       if (state.lastInvestmentDay === undefined) state.lastInvestmentDay = Math.floor((state.gameTime || 0) / 1440);
 
       updateMarketPrices();
@@ -2745,41 +2810,59 @@
       render();
     }
 
+    function getNextPotPrice() {
+      // Первый горшок уже выдан бесплатно. Следующие — с реальной ценой.
+      const n = state.pots.length; // 1, 2, 3...
+      // 2-й: 200$, 3-й: 350$, 4-й: 550$, 5-й: 800$ ...
+      return 50 + n * 150;
+    }
+
+    let _buyingPot = false;
     function buyPot() {
+      if (_buyingPot) return;
       let maxLevel = 1;
       for (let i = 0; i < POT_LEVELS.length; i++) {
         if (state.level >= (i + 1) * 2) maxLevel = POT_LEVELS[i].id;
       }
       const level = getPotLevel(maxLevel);
       if (!level) { showToast('Ошибка', true); return; }
-      const price = level.price + state.pots.length * 50;
-      if (state.money < price) { showToast('Мало денег', true); return; }
-      state.money -= price;
-      state.pots.push({
-        id: state.nextPotId++,
-        strain: null,
-        plantedAt: null,
-        water: 80,
-        health: 100,
-        stage: 0,
-        disease: false,
-        pests: false,
-        pestLevel: 0,
-        lamp: null,
-        fert: null,
-        speedMult: 1,
-        yieldMult: 1,
-        thc: 0,
-        lastTick: Date.now(),
-        _lastWarning: null,
-        potLevel: maxLevel,
-        isActive: true
-      });
-      showToast('🪴 Новый горшок!');
-      haptic('success');
-      addXp(5);
-      save();
-      render();
+      const price = getNextPotPrice();
+      const money = Math.floor(Number(state.money) || 0);
+      if (money < price) {
+        showToast('Мало денег (нужно ' + price + '$)', true);
+        return;
+      }
+      _buyingPot = true;
+      try {
+        state.money = money - price;
+        state.pots.push({
+          id: state.nextPotId++,
+          strain: null,
+          plantedAt: null,
+          water: 80,
+          health: 100,
+          stage: 0,
+          disease: false,
+          pests: false,
+          pestLevel: 0,
+          lamp: null,
+          fert: null,
+          speedMult: 1,
+          yieldMult: 1,
+          thc: 0,
+          lastTick: Date.now(),
+          _lastWarning: null,
+          potLevel: maxLevel,
+          isActive: true
+        });
+        showToast('🪴 Новый горшок (−' + price + '$)');
+        haptic('success');
+        addXp(5);
+        save();
+        render();
+      } finally {
+        _buyingPot = false;
+      }
     }
 
     function buyLamp(lid) {
@@ -3073,6 +3156,137 @@
       render();
     }
 
+
+    function getUnlockedBuyers() {
+      const lvl = state.level || 1;
+      return BUYERS.filter(b => lvl >= (b.minLevel || 1));
+    }
+
+    function getBuyerRelation(buyerId) {
+      if (!state.buyerRelations) state.buyerRelations = {};
+      if (!state.buyerRelations[buyerId]) {
+        state.buyerRelations[buyerId] = { xp: 0, level: 1, totalSold: 0 };
+      }
+      return state.buyerRelations[buyerId];
+    }
+
+    function getBuyerRelLevel(buyerId) {
+      const rel = getBuyerRelation(buyerId);
+      let lvl = 1;
+      for (let i = BUYER_REL_XP.length - 1; i >= 1; i--) {
+        if ((rel.xp || 0) >= BUYER_REL_XP[i]) { lvl = i + 1; break; }
+      }
+      rel.level = Math.min(10, lvl);
+      return rel.level;
+    }
+
+    function getBuyerRelProgress(buyerId) {
+      const rel = getBuyerRelation(buyerId);
+      const lvl = getBuyerRelLevel(buyerId);
+      if (lvl >= 10) return { level: 10, xp: rel.xp, need: 0, pct: 100 };
+      const cur = BUYER_REL_XP[lvl - 1] || 0;
+      const next = BUYER_REL_XP[lvl] || (cur + 1);
+      const pct = Math.min(100, Math.floor(((rel.xp - cur) / (next - cur)) * 100));
+      return { level: lvl, xp: rel.xp, need: next, pct: Math.max(0, pct) };
+    }
+
+    function addBuyerRelationXp(buyerId, saleTotal) {
+      const rel = getBuyerRelation(buyerId);
+      const before = getBuyerRelLevel(buyerId);
+      // 1 XP за каждые 2$ продажи
+      rel.xp = (rel.xp || 0) + Math.floor(saleTotal / 2);
+      rel.totalSold = (rel.totalSold || 0) + saleTotal;
+      const after = getBuyerRelLevel(buyerId);
+      if (after > before) {
+        showToast(`🤝 ${getBuyer(buyerId)?.name || 'Покупатель'}: отношения ур. ${after}!`);
+        haptic('success');
+      }
+    }
+
+    function refreshBuyers(force) {
+      const now = Date.now();
+      if (!force && state.buyerRefreshAt && now < state.buyerRefreshAt && (state.activeBuyers || []).length) {
+        // Убрать тех, кого уже не хватает по уровню
+        state.activeBuyers = state.activeBuyers.filter(id => {
+          const b = getBuyer(id);
+          return b && (state.level || 1) >= (b.minLevel || 1);
+        });
+        if (state.activeBuyers.length) return state.activeBuyers;
+      }
+      const unlocked = getUnlockedBuyers();
+      if (!unlocked.length) {
+        state.activeBuyers = ['vasya', 'sergey'];
+      } else {
+        const shuffled = [...unlocked].sort(() => Math.random() - 0.5);
+        state.activeBuyers = shuffled.slice(0, Math.min(3, shuffled.length)).map(b => b.id);
+      }
+      state.buyerRefreshAt = now + 10 * 60 * 1000;
+      save();
+      return state.activeBuyers;
+    }
+
+    function getBuyer(id) {
+      return BUYERS.find(b => b.id === id);
+    }
+
+    function getBuyerPrice(buyerId, strainId, basePrice) {
+      const b = getBuyer(buyerId);
+      if (!b) return basePrice;
+      let mult = b.mult || 1;
+      // Бонус от уровня отношений: +3% за каждый уровень выше 1 (макс +27% на 10 ур.)
+      const relLvl = getBuyerRelLevel(buyerId);
+      mult *= (1 + (relLvl - 1) * 0.03);
+      if ((b.prefers || []).includes(strainId)) mult *= 1.2;
+      if ((b.hates || []).includes(strainId)) mult *= 0.7;
+      return Math.max(1, Math.floor(basePrice * mult));
+    }
+
+    function renderBuyersPanel() {
+      refreshBuyers(false);
+      const box = document.getElementById('buyers-panel');
+      if (!box) return;
+      const left = Math.max(0, (state.buyerRefreshAt || 0) - Date.now());
+      const mins = Math.floor(left / 60000);
+      const secs = Math.floor((left % 60000) / 1000);
+      const unlocked = getUnlockedBuyers();
+      const locked = BUYERS.filter(b => (state.level || 1) < (b.minLevel || 1));
+
+      let html = `<div class="section-title">🧍 Покупатели <span style="font-size:9px;color:var(--hint);font-weight:400;">обн. ${mins}:${String(secs).padStart(2,'0')} · открыто ${unlocked.length}/${BUYERS.length}</span></div>`;
+
+      (state.activeBuyers || []).forEach(id => {
+        const b = getBuyer(id);
+        if (!b) return;
+        const prog = getBuyerRelProgress(id);
+        const pref = (b.prefers || []).map(s => {
+          const st = getStrain(s);
+          return st ? st.emoji : s;
+        }).join(' ') || 'любые';
+        const bonusPct = Math.round((prog.level - 1) * 3);
+        html += `<div class="card" style="margin-bottom:4px;">
+          <div class="card-emoji">${b.emoji}</div>
+          <div class="card-info" style="flex:1;">
+            <div class="card-title">${b.name} · <span style="font-size:9px;color:var(--hint)">${b.mood}</span>
+              <span style="font-size:9px;color:var(--gold);"> Lv.${prog.level}</span>
+            </div>
+            <div class="card-desc">${b.desc}</div>
+            <div class="card-desc">×${b.mult.toFixed(2)}${bonusPct ? ' +' + bonusPct + '% дружба' : ''} · ${pref}</div>
+            <div style="margin-top:3px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${prog.pct}%;background:linear-gradient(90deg,#ffd700,#ff9800);"></div>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      if (locked.length) {
+        const next = locked.sort((a, b) => a.minLevel - b.minLevel)[0];
+        html += `<div style="font-size:9px;color:var(--hint);text-align:center;padding:4px;">
+          🔒 Далее: ${next.emoji} ${next.name} с ур. игрока ${next.minLevel}
+        </div>`;
+      }
+
+      box.innerHTML = html;
+    }
+
     function openSellModal(key) {
       const amt = state.inventory[key] || 0;
       if (amt <= 0) return;
@@ -3080,24 +3294,75 @@
       if (!info) return;
       const penalty = getSaturationPenalty(amt);
       let basePrice = info.sellPrice;
-      // Для сырья используем рыночную цену
       if (info.type === 'raw') {
         basePrice = getMarketPrice(info.strain || key);
       }
-      const currentPrice = Math.floor(basePrice * penalty);
+      basePrice = Math.floor(basePrice * penalty);
+      const strainId = info.strain || key;
+
+      refreshBuyers(false);
+      const buyerIds = state.activeBuyers || [];
+      // Цены от каждого покупателя
+      const offers = buyerIds.map(bid => {
+        const b = getBuyer(bid);
+        const price = getBuyerPrice(bid, strainId, basePrice);
+        return { buyerId: bid, buyer: b, price };
+      }).sort((a, b) => b.price - a.price);
+
+      const best = offers[0];
       sellTarget = {
         key: key,
         name: info.name,
-        price: currentPrice,
-        maxQty: amt
+        strainId: strainId,
+        basePrice: basePrice,
+        price: best ? best.price : basePrice,
+        buyerId: best ? best.buyerId : null,
+        maxQty: amt,
+        offers: offers
       };
       sellQty = Math.min(1, amt);
+
       document.getElementById('sellTitle').textContent = '💰 Продажа: ' + info.name;
       document.getElementById('sellInfo').textContent =
-        `Цена: ${currentPrice}$ за шт. (базовая ${basePrice}$, скидка ${Math.round((1 - penalty) * 100)}%) | Всего: ${amt} шт.`;
+        `Рынок: ${basePrice}$/шт · В наличии: ${amt} шт. · Выбери покупателя:`;
+
+      const box = document.getElementById('sell-buyers');
+      if (box) {
+        box.innerHTML = offers.map(o => {
+          const b = o.buyer;
+          if (!b) return '';
+          const selected = sellTarget.buyerId === o.buyerId;
+          const pref = (b.prefers || []).includes(strainId) ? ' ★' : '';
+          const hate = (b.hates || []).includes(strainId) ? ' ✗' : '';
+          const relLvl = getBuyerRelLevel(o.buyerId);
+          return `<div class="card" style="margin-bottom:4px;cursor:pointer;border:${selected ? '2px solid var(--gold)' : '1px solid transparent'};"
+            onclick="selectSellBuyer('${o.buyerId}')">
+            <div class="card-emoji">${b.emoji}</div>
+            <div class="card-info">
+              <div class="card-title">${b.name}${pref}${hate} <span style="font-size:9px;color:var(--gold);">Lv.${relLvl}</span></div>
+              <div class="card-desc">${b.mood} · ${b.desc}</div>
+            </div>
+            <div style="font-weight:700;color:var(--gold);font-size:13px;">${o.price}$</div>
+          </div>`;
+        }).join('') || '<div class="empty">Нет покупателей</div>';
+      }
+
       document.getElementById('sellQtyDisplay').textContent = sellQty;
       document.getElementById('sellModal').classList.add('show');
     }
+
+    function selectSellBuyer(buyerId) {
+      if (!sellTarget || !sellTarget.offers) return;
+      const offer = sellTarget.offers.find(o => o.buyerId === buyerId);
+      if (!offer) return;
+      sellTarget.buyerId = buyerId;
+      sellTarget.price = offer.price;
+      // перерисовать выделение
+      openSellModal(sellTarget.key);
+      sellQty = Math.min(sellQty, sellTarget.maxQty);
+      document.getElementById('sellQtyDisplay').textContent = sellQty;
+    }
+
 
     function changeSellQty(delta) {
       if (!sellTarget) return;
@@ -3118,18 +3383,21 @@
 
     function confirmSell() {
       if (!sellTarget) return;
-      const { key, price, maxQty } = sellTarget;
+      const { key, price, maxQty, buyerId } = sellTarget;
       const qty = Math.min(sellQty, maxQty);
       if (qty <= 0) { showToast('Выберите количество', true); return; }
       if ((state.inventory[key] || 0) < qty) { showToast('Недостаточно товара', true); return; }
+      if (!buyerId) { showToast('Выбери покупателя', true); return; }
       const total = qty * price;
+      const buyer = getBuyer(buyerId);
       addMoney(total);
       state.inventory[key] -= qty;
       if (state.inventory[key] <= 0) delete state.inventory[key];
-      showToast(`💰 Продано ${qty} шт. за ${total}$`);
+      showToast(`💰 ${buyer ? buyer.emoji + ' ' + buyer.name : ''}: ${qty} шт. за ${total}$`);
       haptic('success');
       addXp(Math.floor(total / 10));
       addHeat(total / 15);
+      if (buyerId && typeof addBuyerRelationXp === 'function') addBuyerRelationXp(buyerId, total);
       closeSellModal();
       save();
       render();
@@ -3395,9 +3663,13 @@
         grid.appendChild(div);
       });
       const maxLevel = Math.min(5, Math.floor((state.level + 1) / 2) + 1);
-      const buyLevel = getPotLevel(maxLevel) || POT_LEVELS[0];
-      const price = buyLevel.price + state.pots.length * 50;
-      document.getElementById('btn-buy-pot').textContent = '➕ Купить горшок (' + price + '$)';
+      const price = getNextPotPrice();
+      const btn = document.getElementById('btn-buy-pot');
+      if (btn) {
+        btn.textContent = '➕ Купить горшок (' + price + '$)';
+        btn.disabled = (Math.floor(state.money) < price);
+        btn.style.opacity = (Math.floor(state.money) < price) ? '0.5' : '1';
+      }
     }
 
     function renderMarket() {
@@ -3660,7 +3932,7 @@
       document.getElementById('profile-energy').textContent = Math.floor(state.energy) + '/' + state.maxEnergy;
       document.getElementById('profile-harvests').textContent = state.totalHarvests || 0;
       document.getElementById('profile-pots').textContent = state.pots.length;
-      const stateText = document.body.classList.contains('snoop-high') ? '🔥 Убойная трава!' : (highTimer ?
+      const stateText = (snoopTimer || (highElements && highElements.length)) ? '🔥 Убойная трава!' : (highTimer ?
         '🌀 Накурило!' : '🧠 Норма');
       document.getElementById('profile-state').textContent = stateText;
       document.getElementById('profile-heat').textContent = Math.floor(state.heat) + '%';
@@ -3737,14 +4009,15 @@
             }
           } catch (e) {}
           const money = friendData?.money || 0;
-          const level = friendData?.level || 1;
+          const level = friendData?.level || friend.level || 1;
           const isOnline = friendData ? (Date.now() - friendData.lastActive < 60000) : false;
           const dotClass = isOnline ? 'online' : 'offline';
           const statusText = isOnline ? '🟢 онлайн' : '⚪ офлайн';
+          const refBadge = friend.source === 'referral' ? ' <span style="font-size:8px;color:var(--gold);">реферал</span>' : '';
           html += `
                 <div class="friend-item">
                     <span class="online-dot ${dotClass}"></span>
-                    <span style="flex:1;font-weight:600;">${friend.name}</span>
+                    <span style="flex:1;font-weight:600;">${friend.name}${refBadge}</span>
                     <span style="font-size:10px;color:var(--hint);">💰${money} • 🏆${level}</span>
                     <span style="font-size:8px;color:var(--hint);">${statusText}</span>
                     <button class="btn btn-small btn-secondary" onclick="removeFriend(${i})">🗑</button>
@@ -3799,6 +4072,7 @@
       updateGameTime();
       checkAchievements();
       if (typeof renderMyRating === 'function') renderMyRating();
+      if (typeof renderBuyersPanel === 'function') renderBuyersPanel();
     }
 
     // ============================================================
@@ -4023,12 +4297,32 @@
                 </div>
               `).join('');
           }
+
+          // Добавляем рефералов в друзья
+          if (!state.friends) state.friends = [];
+          data.directs.forEach(d => {
+            const exists = state.friends.some(f => f.id === d.id || f.name === d.name);
+            if (!exists) {
+              state.friends.push({
+                id: d.id,
+                name: d.name,
+                level: d.level || 1,
+                source: 'referral',
+                addedAt: Date.now()
+              });
+            } else {
+              // обновить уровень
+              const f = state.friends.find(x => x.id === d.id || x.name === d.name);
+              if (f) { f.level = d.level || f.level; f.id = d.id; }
+            }
+          });
         }
 
         state.referrals = downline[0] || 0;
         state.referralEarned = Math.floor(data.totalEarned || 0);
         state.refPending = Math.floor(data.pending || 0);
         save();
+        if (typeof renderSocial === 'function') renderSocial();
       } catch (e) {
         console.log('referral stats error', e);
       }
@@ -4185,9 +4479,11 @@
 
     function applyHighEffect() {
       if (highTimer) return;
-      showToast('🌀 Тебя накурило! 30 секунд!', false);
+      showToast('🌀 Тебя накурило! Иконки плывут 30 сек...', false);
       haptic('warning');
-      document.querySelectorAll('.pot-emoji, .card-emoji, .plant-container svg, .btn').forEach(el => {
+      highElements.forEach(el => el.classList.remove('snoop-high'));
+      highElements = [];
+      document.querySelectorAll('.pot-emoji, .card-emoji, .plant-container, .tab, .header .badge').forEach(el => {
         el.classList.add('snoop-high');
         highElements.push(el);
       });
@@ -4215,23 +4511,34 @@
       document.getElementById('snoopPopup').classList.remove('show');
       document.getElementById('snoopOverlay').classList.remove('active');
       state.money += 50;
+      state.totalEarned = (state.totalEarned || 0) + 50;
       state.energy = Math.min(state.maxEnergy, state.energy + 20);
-      showToast('🔥 Сильный накур! +50$ +20⚡');
+      showToast('🔥 Сильный накур! +50$ +20⚡ · иконки плывут...');
       haptic('success');
-      document.body.classList.add('snoop-high');
+      // Расфокус / «расплывание» иконок, без тряски экрана
+      highElements.forEach(el => el.classList.remove('snoop-high'));
+      highElements = [];
+      document.querySelectorAll('.pot-emoji, .card-emoji, .plant-container, .tab, .header .badge, .btn .btn-icon, .room-item .big').forEach(el => {
+        el.classList.add('snoop-high');
+        highElements.push(el);
+      });
       document.getElementById('snoopOverlay').classList.add('active');
       document.getElementById('profile-state').textContent = '🔥 Убойная трава!';
       clearTimeout(snoopTimer);
+      if (highTimer) clearTimeout(highTimer);
       snoopTimer = setTimeout(() => {
-        document.body.classList.remove('snoop-high');
+        highElements.forEach(el => el.classList.remove('snoop-high'));
+        highElements = [];
         document.getElementById('snoopOverlay').classList.remove('active');
         document.getElementById('profile-state').textContent = '🧠 Норма';
         showToast('🌀 Эффект убойной травы прошёл...');
+        snoopTimer = null;
       }, 30000);
       state.snoopActive = false;
       state.snoopCooldown = Date.now();
       addHeat(10);
       save();
+      render();
       render();
     }
 
@@ -4330,6 +4637,7 @@
     window.buyFert = buyFert;
     window.buyEnergy = buyEnergy;
     window.buyPot = buyPot;
+    window.selectSellBuyer = selectSellBuyer;
     window.buyRoomUpgrade = buyRoomUpgrade;
     window.sellAll = sellAll;
     window.sellProduct = sellProduct;
