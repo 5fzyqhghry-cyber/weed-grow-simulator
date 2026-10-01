@@ -885,6 +885,22 @@
     </div>
   </div>
 
+  
+  <div class="modal-overlay" id="registerModal">
+    <div class="modal" style="text-align:center;">
+      <div style="font-size:40px;margin-bottom:6px;">📝</div>
+      <div class="modal-title">Добро пожаловать!</div>
+      <div id="register-modal-text" style="font-size:12px;color:var(--hint);margin-bottom:12px;line-height:1.5;">
+        Зарегистрируйся на сервере, чтобы попасть в рейтинг и закрепиться в сети друга.
+      </div>
+      <button class="btn btn-full" id="btn-register-modal" onclick="registerFromWelcome()"
+        style="background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;font-weight:700;margin-bottom:6px;">
+        📝 Зарегистрироваться
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="closeRegisterModal()">Позже</button>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="policeModal">
     <div class="modal">
       <div class="modal-title">👮 ПОЛИЦИЯ!</div>
@@ -1256,14 +1272,34 @@
     let adminAuthed = false;
     let godMode = false;
 
-    let userId = 'guest_' + Math.random().toString(36).slice(2, 9);
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      if (tg.initDataUnsafe?.user?.id) {
-        userId = String(tg.initDataUnsafe.user.id);
+    // Стабильный ID: Telegram → localStorage → новый guest
+    let userId = null;
+    try {
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        if (tg.initDataUnsafe?.user?.id) {
+          userId = String(tg.initDataUnsafe.user.id);
+        }
       }
+    } catch (e) {}
+    if (!userId) {
+      try { userId = localStorage.getItem('grow_sim_uid'); } catch (e) {}
     }
+    if (!userId) {
+      userId = 'guest_' + Math.random().toString(36).slice(2, 10);
+    }
+    try { localStorage.setItem('grow_sim_uid', userId); } catch (e) {}
+    // Если позже Telegram отдал ID — переключим
+    try {
+      if (tg?.initDataUnsafe?.user?.id) {
+        const tgId = String(tg.initDataUnsafe.user.id);
+        if (userId !== tgId) {
+          userId = tgId;
+          localStorage.setItem('grow_sim_uid', userId);
+        }
+      }
+    } catch (e) {}
 
     // ============================================================
     // ====== ДАННЫЕ ======
@@ -2334,6 +2370,7 @@
       if (!banner) return;
       if (state.registered) {
         banner.style.display = 'none';
+        closeRegisterModal();
         document.getElementById('profile-registered').textContent = '✅ Да';
       } else {
         banner.style.display = 'block';
@@ -3679,12 +3716,13 @@
       }
       const pack = getBribePackages().find(p => p.id === packId);
       if (!pack) return;
-      if (state.money < pack.cost) {
-        showToast('Мало денег', true);
+      const cost = Math.floor(pack.cost);
+      if (Math.floor(state.money) < cost) {
+        showToast('Мало денег (нужно ' + cost + '$)', true);
         return;
       }
-      state.money -= pack.cost;
-      state.totalBribesPaid = (state.totalBribesPaid || 0) + pack.cost;
+      state.money = Math.floor(state.money) - cost;
+      state.totalBribesPaid = (state.totalBribesPaid || 0) + cost;
       state.heat = Math.max(0, (state.heat || 0) - pack.heatDrop);
       state.policeFavor = Math.min(150, (state.policeFavor || 0) + pack.favorGain);
       state.lastBribeTime = Date.now();
@@ -3977,7 +4015,8 @@
       const fine = calcPoliceFine(tier);
       const hasItems = Object.keys(state.inventory || {}).some(k => state.inventory[k] > 0);
       const favor = typeof getPoliceFavorLevel === 'function' ? getPoliceFavorLevel() : { bonus: 0 };
-      const bribeCost = Math.min(state.money, Math.floor((150 + tier * 120 + state.money * 0.05) * (1 - (favor.bonus || 0))));
+      // Фиксированная цена взятки (НЕ обрезается до баланса — иначе «откуп» за копейки)
+      const bribeCost = Math.max(100, Math.floor((150 + tier * 120 + Math.min(state.money, 5000) * 0.05) * (1 - (favor.bonus || 0))));
 
       if (tier === 2) {
         message.innerHTML = '📞 <b>ПРЕДУПРЕЖДЕНИЕ УЧАСТКА</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Штраф за игнор: <b>' + fine + '$</b>';
@@ -3986,8 +4025,10 @@
         addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать', () => handlePoliceChoice('ignore', { fine, tier }));
       } else if (tier === 3) {
         message.innerHTML = '🚨 <b>ОБЫСК</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Выбери действие:';
-        if (state.money >= 100) {
+        if (state.money >= bribeCost) {
           addPoliceBtn(optionsDiv, 'btn-police', '💰 Взятка (' + bribeCost + '$)', () => handlePoliceChoice('bribe', { bribeCost, tier }));
+        } else {
+          addPoliceBtn(optionsDiv, 'btn-secondary', '💰 Взятка (' + bribeCost + '$) — мало денег', () => showToast('Нужно ' + bribeCost + '$', true));
         }
         if (hasItems) {
           addPoliceBtn(optionsDiv, 'btn-warning', '📦 Отдать половину товара', () => handlePoliceChoice('half', { tier }));
@@ -3998,8 +4039,10 @@
         addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать (штраф + палево)', () => handlePoliceChoice('ignore', { fine, tier }));
       } else if (tier === 4) {
         message.innerHTML = '🚔 <b>РЕЙД!</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Если проигнорируешь — арест!';
-        if (state.money >= 150) {
+        if (state.money >= bribeCost) {
           addPoliceBtn(optionsDiv, 'btn-police', '💰 Крупная взятка (' + bribeCost + '$)', () => handlePoliceChoice('bribe', { bribeCost, tier }));
+        } else {
+          addPoliceBtn(optionsDiv, 'btn-secondary', '💰 Крупная взятка (' + bribeCost + '$) — мало денег', () => showToast('Нужно ' + bribeCost + '$', true));
         }
         if (hasItems) {
           addPoliceBtn(optionsDiv, 'btn-warning', '📦 Отдать весь товар + 30% денег', () => handlePoliceChoice('raid_surrender', { tier }));
@@ -4010,9 +4053,11 @@
       } else {
         // tier 5 — арест
         message.innerHTML = '🔒 <b>АРЕСТ</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Срок: <b>3 игровых дня</b><br>Или огромная взятка:';
-        const jailBribe = Math.min(state.money, Math.floor(500 + state.money * 0.25 + 300));
-        if (state.money >= 300) {
+        const jailBribe = Math.max(500, Math.floor(800 + Math.min(state.money, 10000) * 0.15));
+        if (state.money >= jailBribe) {
           addPoliceBtn(optionsDiv, 'btn-police', '💰 Откупиться (' + jailBribe + '$)', () => handlePoliceChoice('jail_bribe', { bribeCost: jailBribe, tier }));
+        } else {
+          addPoliceBtn(optionsDiv, 'btn-secondary', '💰 Откупиться (' + jailBribe + '$) — не хватает', () => showToast('Нужно ' + jailBribe + '$, у тебя ' + Math.floor(state.money) + '$', true));
         }
         addPoliceBtn(optionsDiv, 'btn-secondary', '🔒 Сесть на 3 игровых дня', () => handlePoliceChoice('jail', { tier }));
       }
@@ -4104,19 +4149,24 @@
           return;
         }
         case 'bribe': {
-          const cost = Math.min(state.money, opts.bribeCost || 200);
-          if (state.money >= cost && cost > 0) {
-            state.money -= cost;
+          const cost = Math.max(1, Math.floor(opts.bribeCost || 200));
+          if (Math.floor(state.money) >= cost) {
+            state.money = Math.floor(state.money) - cost;
             state.heat = Math.max(0, state.heat - (40 + tier * 8));
             state.policeWarningsIgnored = 0;
             state.policeFavor = Math.min(150, (state.policeFavor || 0) + 5 + tier);
             state.totalBribesPaid = (state.totalBribesPaid || 0) + cost;
-            message = '💰 Взятка ' + cost + '$. Полиция ушла. Связи +';
+            message = '💰 Взятка ' + cost + '$. Полиция ушла.';
             haptic('success');
           } else {
-            state.heat = Math.min(100, state.heat + 10);
-            message = '❌ Не хватает на взятку! Палево выросло.';
+            message = '❌ Не хватает! Нужно ' + cost + '$, у тебя ' + Math.floor(state.money) + '$';
             haptic('error');
+            // Не снижаем палево и не отпускаем «бесплатно»
+            closePoliceModal();
+            showToast(message, true);
+            save();
+            render();
+            return;
           }
           break;
         }
@@ -4171,16 +4221,21 @@
           break;
         }
         case 'jail_bribe': {
-          const cost = Math.min(state.money, opts.bribeCost || 500);
-          if (state.money >= cost) {
-            state.money -= cost;
+          const cost = Math.max(1, Math.floor(opts.bribeCost || 500));
+          if (Math.floor(state.money) >= cost) {
+            state.money = Math.floor(state.money) - cost;
             state.heat = Math.max(0, Math.min(30, state.heat - 70));
             state.policeWarningsIgnored = 0;
+            state.policeFavor = Math.min(150, (state.policeFavor || 0) + 10);
+            state.totalBribesPaid = (state.totalBribesPaid || 0) + cost;
             message = '💰 Откупился за ' + cost + '$. На свободе.';
             haptic('success');
           } else {
+            showToast('❌ Не хватает на откуп (' + cost + '$)', true);
             closePoliceModal();
-            sendToJail();
+            // Не сажаем автоматически — пусть выберет «Сесть» сам
+            save();
+            render();
             return;
           }
           break;
@@ -4876,10 +4931,12 @@
     // ====== РЕФЕРАЛЫ ======
     // ============================================================
     function getRefLink() {
-      if (tg) {
-        return `https://t.me/${BOT_USERNAME}?startapp=ref_${userId}`;
+      // Всегда реальный userId + авторегистрация приглашающего
+      const id = userId || 'unknown';
+      if (tg || BOT_USERNAME) {
+        return 'https://t.me/' + BOT_USERNAME + '?startapp=ref_' + id;
       }
-      return window.location.origin + '/?ref=' + userId;
+      return (window.location.origin || '') + '/?ref=' + id;
     }
 
 
@@ -4926,11 +4983,11 @@
               <span style="font-size:8px;">Отправь ссылку — с первых 10 будет 35% от их недельного заработка</span>
             </div>`;
           } else {
-            list.innerHTML = '<div style="font-size:10px;font-weight:600;color:var(--hint);margin-top:4px;">👥 Прямые (L1)</div>' +
+            list.innerHTML = '<div style="font-size:10px;font-weight:600;color:var(--hint);margin-top:4px;">👥 Прямые (L1) · ' + data.directs.length + '</div>' +
               data.directs.map(d => `
-                <div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px;display:flex;justify-content:space-between;">
-                  <span>${d.name} · Lv.${d.level}</span>
-                  <span style="color:var(--gold);">${Math.round(d.rate * 100)}% · ${Math.floor(d.weeklyEarned || 0)}$/нед</span>
+                <div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px;display:flex;justify-content:space-between;gap:4px;">
+                  <span>${d.online ? '🟢' : '⚪'} ${d.name} · Lv.${d.level || 1}</span>
+                  <span style="color:var(--gold);white-space:nowrap;">${Math.round((d.rate || 0.35) * 100)}% · ${Math.floor(d.weeklyEarned || 0)}$/нед</span>
                 </div>
               `).join('');
           }
@@ -5010,40 +5067,116 @@
       navigator.clipboard?.writeText(link).then(() => showToast('📋 Ссылка скопирована'));
     }
 
-    function handleReferral() {
-      let refId = null;
+    
+    function showRegisterWelcome() {
+      if (state.registered) return;
+      const modal = document.getElementById('registerModal');
+      const text = document.getElementById('register-modal-text');
+      if (!modal) return;
+      if (text) {
+        if (state.referredBy) {
+          text.innerHTML = 'Тебя пригласил друг! 🎉<br>Нажми <b>Зарегистрироваться</b>, чтобы попасть в рейтинг и в его реферальную сеть.';
+        } else {
+          text.innerHTML = 'Зарегистрируйся на сервере, чтобы попасть в <b>рейтинг</b> и соревноваться с другими игроками.';
+        }
+      }
+      modal.classList.add('show');
+    }
 
-      // Telegram Mini App start_param (startapp=ref_XXX)
+    function closeRegisterModal() {
+      const modal = document.getElementById('registerModal');
+      if (modal) modal.classList.remove('show');
+    }
+
+    async function registerFromWelcome() {
+      const btn = document.getElementById('btn-register-modal');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Регистрация...';
+      }
       try {
-        const sp = tg?.initDataUnsafe?.start_param || tg?.initDataUnsafe?.startParam || '';
-        if (sp) {
-          if (String(sp).startsWith('ref_')) refId = String(sp).replace(/^ref_/, '');
-          else if (String(sp).startsWith('ref')) refId = String(sp).replace(/^ref/, '');
-          else refId = String(sp);
+        if (typeof registerProfileOnServer === 'function') {
+          // force path: temporarily allow register even if flag weird
+          state.registered = false;
+          await registerProfileOnServer();
         }
       } catch (e) {}
+      if (state.registered) {
+        closeRegisterModal();
+        showToast('✅ Ты в рейтинге!');
+      } else if (btn) {
+        btn.disabled = false;
+        btn.textContent = '📝 Зарегистрироваться';
+      }
+    }
 
-      // URL ?ref= / ?tgWebAppStartParam=
+
+    function extractRefId() {
+      let refId = null;
+
+      // 1) Telegram WebApp start_param
+      try {
+        const sp = (tg && tg.initDataUnsafe && (tg.initDataUnsafe.start_param || tg.initDataUnsafe.startParam)) || '';
+        if (sp) refId = String(sp);
+      } catch (e) {}
+
+      // 2) initData raw query (иногда start_param только там)
       if (!refId) {
         try {
-          const urlParams = new URLSearchParams(window.location.search);
-          refId = urlParams.get('ref') || urlParams.get('tgWebAppStartParam') || null;
-          if (refId && String(refId).startsWith('ref_')) refId = String(refId).replace(/^ref_/, '');
+          const raw = (tg && tg.initData) ? String(tg.initData) : '';
+          const m = raw.match(/(?:^|&)start_param=([^&]+)/);
+          if (m) refId = decodeURIComponent(m[1]);
         } catch (e) {}
       }
 
-      // Hash fallback
+      // 3) URL params
+      if (!refId) {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          refId = urlParams.get('ref') || urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || null;
+        } catch (e) {}
+      }
+
+      // 4) Hash
       if (!refId && window.location.hash) {
         const m = window.location.hash.match(/ref[_=]([\w-]+)/);
         if (m) refId = m[1];
       }
 
-      if (!refId) return;
-      refId = String(refId).trim();
-      if (!refId || refId === userId || refId === 'null' || refId === 'undefined') return;
+      // 5) Ранее сохранённый pending ref
+      if (!refId) {
+        try {
+          refId = localStorage.getItem('grow_pending_ref') || sessionStorage.getItem('grow_pending_ref');
+        } catch (e) {}
+      }
 
-      // Уже привязан к кому-то — не перезаписываем
-      if (state.referredBy && state.referredBy !== refId) return;
+      if (!refId) return null;
+      refId = String(refId).trim();
+      // нормализация: ref_123 / ref123 / 123
+      if (refId.startsWith('ref_')) refId = refId.slice(4);
+      else if (refId.startsWith('ref') && /^ref\d/.test(refId)) refId = refId.slice(3);
+
+      refId = refId.replace(/[^a-zA-Z0-9_\-]/g, '');
+      if (!refId || refId.length < 2) return null;
+      if (refId === userId || refId === 'null' || refId === 'undefined') return null;
+      return refId;
+    }
+
+    function handleReferral() {
+      const refId = extractRefId();
+      if (!refId) return;
+
+      // Всегда сохраняем pending, пока не привяжемся на сервере
+      try {
+        localStorage.setItem('grow_pending_ref', refId);
+        sessionStorage.setItem('grow_pending_ref', refId);
+      } catch (e) {}
+
+      // Локально привязываем один раз
+      if (state.referredBy && state.referredBy !== refId) {
+        // уже другой реферер — pending не трогаем для сервера
+        return;
+      }
 
       const isNew = !state.referredBy;
       state.referredBy = refId;
@@ -5058,38 +5191,56 @@
       save();
       render();
 
-      // Сразу регистрируем на сервере, чтобы попасть в сеть пригласившего
-      setTimeout(() => {
-        ensureRegisteredOnServer(true);
-      }, 500);
+      setTimeout(() => showRegisterWelcome(), 500);
+      setTimeout(() => ensureRegisteredOnServer(true), 900);
+      setTimeout(() => ensureRegisteredOnServer(true), 3000);
     }
 
-    /** Регистрация/синк на сервере (обязательно для рефералов) */
+    /** Регистрация/синк на сервере (рефералы + рейтинг) */
     async function ensureRegisteredOnServer(force) {
       try {
-        if (!force && state.registered) {
-          await syncWithServer();
-          return;
+        // Подтянуть ref из pending если state пустой
+        if (!state.referredBy) {
+          try {
+            const p = localStorage.getItem('grow_pending_ref') || sessionStorage.getItem('grow_pending_ref');
+            if (p && p !== userId) state.referredBy = p;
+          } catch (e) {}
         }
+
+        const payload = getRatingPayload();
+        // Гарантируем referredBy в payload
+        if (!payload.referredBy && state.referredBy) payload.referredBy = state.referredBy;
+
         const response = await fetch(`${SERVER_URL}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(getRatingPayload())
+          body: JSON.stringify(payload)
         });
         const data = await response.json();
         if (data && data.success) {
           state.registered = true;
+          if (data.referredBy) {
+            state.referredBy = data.referredBy;
+            try {
+              localStorage.removeItem('grow_pending_ref');
+              sessionStorage.removeItem('grow_pending_ref');
+            } catch (e) {}
+          }
           save();
           updateRegisterBanner();
-          if (data.referredBy) {
-            showToast('✅ Ты в сети игрока!');
+          if (typeof closeRegisterModal === 'function') closeRegisterModal();
+          if (data.referralBound) {
+            showToast('✅ Ты в сети пригласившего!');
           }
           loadReferralStats();
+          return data;
         }
       } catch (e) {
         console.log('ensureRegistered error', e);
       }
+      return null;
     }
+
 
 
     // ============================================================
@@ -5243,6 +5394,13 @@
       updateWeather();
     }, 5000);
 
+    // Синк на сервер каждые 60 сек (рефералы + недельный заработок)
+    setInterval(() => {
+      if (state.registered || state.referredBy) {
+        ensureRegisteredOnServer(true);
+      }
+    }, 60000);
+
     load();
     handleReferral();
     render();
@@ -5250,6 +5408,10 @@
     setTimeout(() => {
       if (state.referredBy || state.registered) ensureRegisteredOnServer(true);
       loadReferralStats();
+      // Если пришёл по рефералке и ещё не в рейтинге — показать окно регистрации
+      if (state.referredBy && !state.registered) {
+        showRegisterWelcome();
+      }
     }, 1500);
     updateRegisterBanner();
     checkAdminSession();
@@ -5295,6 +5457,9 @@
     window.copyReferral = copyReferral;
     window.loadLeaderboardFromServer = loadLeaderboardFromServer;
     window.registerProfileOnServer = registerProfileOnServer;
+    window.showRegisterWelcome = showRegisterWelcome;
+    window.closeRegisterModal = closeRegisterModal;
+    window.registerFromWelcome = registerFromWelcome;
     window.ensureRegisteredOnServer = ensureRegisteredOnServer;
     window.acceptSnoop = acceptSnoop;
     window.rejectSnoop = rejectSnoop;
