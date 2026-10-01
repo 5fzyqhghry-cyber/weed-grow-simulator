@@ -759,6 +759,69 @@
         min-height: 30px;
       }
     }
+
+    /* ===== ADMIN PANEL ===== */
+    .admin-panel {
+      background: linear-gradient(145deg, #1a0a0a, #2a1010);
+      border: 2px solid #e53935;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .admin-panel .admin-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e53935;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .admin-grid .btn { font-size: 10px; min-height: 32px; padding: 4px 6px; }
+    .admin-input-row {
+      display: flex;
+      gap: 6px;
+      margin: 6px 0;
+      align-items: center;
+    }
+    .admin-input-row input {
+      flex: 1;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 10px;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+    }
+    .admin-input-row input:focus { border-color: #e53935; }
+    .admin-section-title {
+      font-size: 10px;
+      color: #ff8a80;
+      text-transform: uppercase;
+      margin: 10px 0 4px;
+      letter-spacing: 0.5px;
+    }
+    .admin-login {
+      text-align: center;
+      padding: 16px;
+    }
+    .admin-login input {
+      width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 14px;
+      margin: 8px 0;
+      text-align: center;
+    }
+
   </style>
 </head>
 <body>
@@ -884,6 +947,7 @@
     <div class="tab" data-tab="profile">👤 Профиль</div>
     <div class="tab" data-tab="leaderboard">🏆 Рейтинг</div>
     <div class="tab" data-tab="friends">👥 Друзья</div>
+    <div class="tab" data-tab="admin" id="admin-tab" style="display:none;">🛠 Админ</div>
   </div>
 
   <div class="content">
@@ -1008,6 +1072,107 @@
     </div>
   </div>
 
+
+    <div class="section" id="section-admin">
+      <div id="admin-login-box" class="admin-login">
+        <div style="font-size:32px;margin-bottom:8px;">🛠</div>
+        <div style="font-weight:700;margin-bottom:4px;">Панель администратора</div>
+        <div style="font-size:11px;color:var(--hint);margin-bottom:8px;">Введи пароль для доступа</div>
+        <input type="password" id="admin-password" placeholder="Пароль..." autocomplete="off">
+        <button class="btn btn-full" style="background:#e53935;margin-top:6px;" onclick="tryAdminLogin()">🔓 Войти</button>
+        <div id="admin-login-error" style="color:#e53935;font-size:11px;margin-top:6px;display:none;">Неверный пароль</div>
+      </div>
+
+      <div id="admin-panel-content" style="display:none;">
+        <div class="admin-panel">
+          <div class="admin-title">🛠 АДМИН-ПАНЕЛЬ</div>
+          <div style="text-align:center;font-size:10px;color:var(--hint);margin-bottom:8px;">
+            Режим: <span id="admin-god-status">выкл</span>
+          </div>
+
+          <div class="admin-section-title">💰 Ресурсы</div>
+          <div class="admin-input-row">
+            <input type="number" id="admin-money" placeholder="Деньги">
+            <button class="btn btn-small btn-gold" onclick="adminSetMoney()">💰</button>
+          </div>
+          <div class="admin-input-row">
+            <input type="number" id="admin-energy" placeholder="Энергия">
+            <button class="btn btn-small btn-blue" onclick="adminSetEnergy()">⚡</button>
+          </div>
+          <div class="admin-input-row">
+            <input type="number" id="admin-level" placeholder="Уровень">
+            <button class="btn btn-small btn-purple" onclick="adminSetLevel()">🏆</button>
+          </div>
+          <div class="admin-input-row">
+            <input type="number" id="admin-heat" placeholder="Палево %">
+            <button class="btn btn-small" style="background:#e53935;" onclick="adminSetHeat()">👮</button>
+          </div>
+          <div class="admin-grid">
+            <button class="btn btn-small btn-gold" onclick="adminAddMoney(10000)">+10K$</button>
+            <button class="btn btn-small btn-gold" onclick="adminAddMoney(100000)">+100K$</button>
+            <button class="btn btn-small btn-blue" onclick="adminFillEnergy()">⚡ Макс</button>
+            <button class="btn btn-small" style="background:#e53935;" onclick="adminClearHeat()">👮 0%</button>
+          </div>
+
+          <div class="admin-section-title">🌱 Растения и ферма</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" onclick="adminInstantGrow()">⏱ Вырастить всё</button>
+            <button class="btn btn-small" onclick="adminHealAll()">❤️ Вылечить всё</button>
+            <button class="btn btn-small" onclick="adminAddPots(3)">🪴 +3 горшка</button>
+            <button class="btn btn-small" onclick="adminClearPests()">🐛 Убрать вредителей</button>
+          </div>
+
+          <div class="admin-section-title">📦 Склад и предметы</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" onclick="adminGiveAllSeeds()">🌱 Все семена</button>
+            <button class="btn btn-small" onclick="adminGiveAllLamps()">💡 Все лампы</button>
+            <button class="btn btn-small" onclick="adminGiveAllFerts()">🧪 Все удобрения</button>
+            <button class="btn btn-small" onclick="adminClearInventory()">🗑 Очистить склад</button>
+          </div>
+          <div class="admin-input-row">
+            <input type="text" id="admin-item-id" placeholder="ID предмета (skunk, haze...)">
+            <input type="number" id="admin-item-qty" placeholder="Кол-во" style="width:70px;flex:0;" value="10">
+            <button class="btn btn-small" onclick="adminGiveItem()">➕</button>
+          </div>
+
+          <div class="admin-section-title">🏠 Комната и разблокировки</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" onclick="adminUnlockRoom()">🏠 Всё в комнате</button>
+            <button class="btn btn-small" onclick="adminMaxLevel()">👑 Макс уровень</button>
+            <button class="btn btn-small" onclick="adminUnlockAchievements()">🏆 Все достижения</button>
+            <button class="btn btn-small" onclick="adminAddInvestments()">📈 Все инвестиции</button>
+          </div>
+
+          <div class="admin-section-title">🌤 Мир</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" onclick="adminSetWeather('sunny')">☀️</button>
+            <button class="btn btn-small" onclick="adminSetWeather('rainy')">🌧</button>
+            <button class="btn btn-small" onclick="adminSetWeather('storm')">⛈</button>
+            <button class="btn btn-small" onclick="adminSetWeather('hot')">🔥</button>
+          </div>
+
+          <div class="admin-section-title">⚙️ Режимы</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" id="btn-godmode" onclick="adminToggleGod()">👁 God Mode</button>
+            <button class="btn btn-small" onclick="adminForceSnoop()">🐶 Снуп</button>
+            <button class="btn btn-small" onclick="adminTriggerPolice()">👮 Полиция</button>
+            <button class="btn btn-small" style="background:#e53935;" onclick="adminResetGame()">💀 Сброс игры</button>
+          </div>
+
+          <div class="admin-section-title">🌐 Сервер (рейтинг)</div>
+          <div class="admin-grid">
+            <button class="btn btn-small" onclick="adminLoadPlayers()">📋 Игроки</button>
+            <button class="btn btn-small" onclick="adminSyncMe()">🔄 Синхронизация</button>
+          </div>
+          <div id="admin-players-list" style="max-height:180px;overflow-y:auto;font-size:10px;margin-top:4px;"></div>
+
+          <div style="margin-top:12px;">
+            <button class="btn btn-secondary btn-full" onclick="adminLogout()">🚪 Выйти из админки</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -1016,7 +1181,10 @@
     // ============================================================
     const BOT_USERNAME = 'Rastafaray420_bot';
     const SERVER_URL = 'https://weedgrow-simulator2-undernz.waw0.amvera.tech';
+    const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
+    let adminAuthed = false;
+    let godMode = false;
 
     let userId = 'guest_' + Math.random().toString(36).slice(2, 9);
     if (tg) {
@@ -2162,8 +2330,8 @@
       const pot = state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
-      if (state.energy < 2) { showToast('Нужно 2⚡', true); return; }
-      state.energy -= 2;
+      if (!godMode && state.energy < 2) { showToast('Нужно 2⚡', true); return; }
+      if (!godMode) state.energy -= 2;
       pot.water = Math.min(100, pot.water + 45);
       showToast('💧 Полито!');
       haptic('medium');
@@ -3740,6 +3908,10 @@
     render();
     setTimeout(() => loadLeaderboardFromServer(), 1000);
     updateRegisterBanner();
+    checkAdminSession();
+    // Secret: 5 taps on XP badge
+    const xpBadge = document.getElementById('xp-badge');
+    if (xpBadge) xpBadge.addEventListener('click', onAdminSecretTap);
 
     // ============================================================
     // ====== ЭКСПОРТЫ ======
@@ -3782,10 +3954,286 @@
     window.sendChatMessage = sendChatMessage;
     window.handlePoliceChoice = handlePoliceChoice;
     window.closePoliceModal = closePoliceModal;
-    window.openCrossModal = openCrossModal;
+
+    // ============================================================
+    // ====== АДМИН-ПАНЕЛЬ ======
+    // ============================================================
+    function tryAdminLogin() {
+      const input = document.getElementById('admin-password');
+      const err = document.getElementById('admin-login-error');
+      if ((input.value || '') === ADMIN_PASSWORD) {
+        adminAuthed = true;
+        try { sessionStorage.setItem('admin_ok', '1'); } catch(e) {}
+        document.getElementById('admin-login-box').style.display = 'none';
+        document.getElementById('admin-panel-content').style.display = 'block';
+        if (err) err.style.display = 'none';
+        showToast('🛠 Админ-доступ открыт');
+        haptic('success');
+        renderAdminForm();
+      } else {
+        if (err) err.style.display = 'block';
+        showToast('Неверный пароль', true);
+        haptic('error');
+      }
+    }
+
+    function adminLogout() {
+      adminAuthed = false;
+      godMode = false;
+      try { sessionStorage.removeItem('admin_ok'); } catch(e) {}
+      document.getElementById('admin-login-box').style.display = 'block';
+      document.getElementById('admin-panel-content').style.display = 'none';
+      const pwd = document.getElementById('admin-password');
+      if (pwd) pwd.value = '';
+      showToast('Выход из админки');
+    }
+
+    function checkAdminSession() {
+      try {
+        if (sessionStorage.getItem('admin_ok') === '1') {
+          adminAuthed = true;
+          const tab = document.getElementById('admin-tab');
+          if (tab) tab.style.display = '';
+          const login = document.getElementById('admin-login-box');
+          const content = document.getElementById('admin-panel-content');
+          if (login) login.style.display = 'none';
+          if (content) content.style.display = 'block';
+          renderAdminForm();
+        }
+      } catch(e) {}
+    }
+
+    let adminTapCount = 0;
+    let adminTapTimer = null;
+    function onAdminSecretTap() {
+      adminTapCount++;
+      clearTimeout(adminTapTimer);
+      adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 2000);
+      if (adminTapCount >= 5) {
+        adminTapCount = 0;
+        const tab = document.getElementById('admin-tab');
+        if (tab) {
+          tab.style.display = '';
+          showToast('🛠 Админ-вкладка открыта');
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+          const sec = document.getElementById('section-admin');
+          if (sec) sec.classList.add('active');
+        }
+      }
+    }
+
+    function renderAdminForm() {
+      const m = document.getElementById('admin-money');
+      const e = document.getElementById('admin-energy');
+      const l = document.getElementById('admin-level');
+      const h = document.getElementById('admin-heat');
+      if (m) m.value = Math.floor(state.money);
+      if (e) e.value = Math.floor(state.energy);
+      if (l) l.value = state.level;
+      if (h) h.value = Math.floor(state.heat);
+      const gs = document.getElementById('admin-god-status');
+      if (gs) gs.textContent = godMode ? 'ВКЛ 👁' : 'выкл';
+      const bg = document.getElementById('btn-godmode');
+      if (bg) bg.style.background = godMode ? '#e53935' : '';
+    }
+
+    function adminSetMoney() {
+      const v = parseInt(document.getElementById('admin-money').value, 10);
+      if (isNaN(v) || v < 0) return showToast('Неверное число', true);
+      state.money = v; save(); render(); renderAdminForm();
+      showToast('💰 Деньги: ' + v);
+    }
+    function adminAddMoney(n) {
+      state.money += n; save(); render(); renderAdminForm();
+      showToast('💰 +' + n + '$');
+    }
+    function adminSetEnergy() {
+      const v = parseInt(document.getElementById('admin-energy').value, 10);
+      if (isNaN(v) || v < 0) return showToast('Неверное число', true);
+      state.energy = Math.min(state.maxEnergy, v); save(); render(); renderAdminForm();
+      showToast('⚡ Энергия: ' + state.energy);
+    }
+    function adminFillEnergy() {
+      state.energy = state.maxEnergy; save(); render(); renderAdminForm();
+      showToast('⚡ Энергия полная');
+    }
+    function adminSetLevel() {
+      const v = parseInt(document.getElementById('admin-level').value, 10);
+      if (isNaN(v) || v < 1) return showToast('Неверное число', true);
+      state.level = v;
+      state.maxEnergy = 100 + (state.level - 1) * 8;
+      state.energy = state.maxEnergy; state.xp = 0;
+      save(); render(); renderAdminForm();
+      showToast('🏆 Уровень: ' + v);
+    }
+    function adminSetHeat() {
+      const v = parseInt(document.getElementById('admin-heat').value, 10);
+      if (isNaN(v) || v < 0) return showToast('Неверное число', true);
+      state.heat = Math.min(100, v); save(); render(); renderAdminForm();
+      showToast('👮 Палево: ' + state.heat + '%');
+    }
+    function adminClearHeat() {
+      state.heat = 0; state.policeActive = false; save(); render(); renderAdminForm();
+      showToast('👮 Палево сброшено');
+    }
+    function adminInstantGrow() {
+      state.pots.forEach(p => {
+        if (p.strain && p.isActive) {
+          p.plantedAt = Date.now() - 999999999;
+          p.stage = 5; p.health = 100; p.water = 100;
+          p.thc = Math.min(100, 70 + Math.random() * 30);
+        }
+      });
+      save(); render(); showToast('⏱ Все растения готовы!');
+    }
+    function adminHealAll() {
+      state.pots.forEach(p => {
+        p.health = 100; p.water = 100; p.disease = false; p.pests = false; p.pestLevel = 0;
+      });
+      save(); render(); showToast('❤️ Всё вылечено');
+    }
+    function adminClearPests() {
+      state.pots.forEach(p => { p.pests = false; p.pestLevel = 0; });
+      save(); render(); showToast('🐛 Вредители убраны');
+    }
+    function adminAddPots(n) {
+      for (let i = 0; i < n; i++) {
+        state.pots.push({
+          id: state.nextPotId++, strain: null, plantedAt: null, water: 80, health: 100, stage: 0,
+          disease: false, pests: false, pestLevel: 0, lamp: null, fert: null,
+          speedMult: 1, yieldMult: 1, thc: 0, lastTick: Date.now(), potLevel: 1, isActive: true
+        });
+      }
+      save(); render(); showToast('🪴 +' + n + ' горшков');
+    }
+    function adminGiveAllSeeds() {
+      STRAINS.forEach(s => { state.inventory[s.id] = (state.inventory[s.id] || 0) + 5; });
+      save(); render(); showToast('🌱 +5 каждого сорта');
+    }
+    function adminGiveAllLamps() {
+      LAMPS.forEach(l => { state.lamps[l.id] = (state.lamps[l.id] || 0) + 3; });
+      save(); render(); showToast('💡 Лампы выданы');
+    }
+    function adminGiveAllFerts() {
+      FERTS.forEach(f => { state.ferts[f.id] = (state.ferts[f.id] || 0) + 10; });
+      save(); render(); showToast('🧪 Удобрения выданы');
+    }
+    function adminClearInventory() {
+      state.inventory = {}; save(); render(); showToast('🗑 Склад очищен');
+    }
+    function adminGiveItem() {
+      const id = (document.getElementById('admin-item-id').value || '').trim();
+      const qty = parseInt(document.getElementById('admin-item-qty').value, 10) || 1;
+      if (!id) return showToast('Укажи ID', true);
+      state.inventory[id] = (state.inventory[id] || 0) + qty;
+      save(); render(); showToast('➕ ' + id + ' ×' + qty);
+    }
+    function adminUnlockRoom() {
+      state.room.vent = true; state.room.auto = true; state.room.heater = true;
+      save(); render(); showToast('🏠 Комната полностью улучшена');
+    }
+    function adminMaxLevel() {
+      state.level = 50; state.maxEnergy = 100 + 49 * 8; state.energy = state.maxEnergy; state.xp = 0;
+      save(); render(); renderAdminForm(); showToast('👑 Уровень 50');
+    }
+    function adminUnlockAchievements() {
+      ACHIEVEMENTS.forEach(a => { if (!state.achievements.includes(a.id)) state.achievements.push(a.id); });
+      save(); render(); showToast('🏆 Все достижения');
+    }
+    function adminAddInvestments() {
+      INVESTMENTS.forEach(inv => { if (!state.investments.includes(inv.id)) state.investments.push(inv.id); });
+      save(); render(); showToast('📈 Все инвестиции');
+    }
+    function adminSetWeather(id) {
+      state.weather = id; state.weatherTimer = 0; save(); render();
+      const w = WEATHERS.find(x => x.id === id);
+      showToast(w ? w.emoji + ' ' + w.name : id);
+    }
+    function adminToggleGod() {
+      godMode = !godMode; renderAdminForm();
+      showToast(godMode ? '👁 God Mode ВКЛ' : '👁 God Mode выкл');
+    }
+    function adminForceSnoop() {
+      state.snoopActive = false; state.snoopCooldown = 0;
+      const p = document.getElementById('snoopPopup');
+      const o = document.getElementById('snoopOverlay');
+      if (p) p.classList.add('show');
+      if (o) o.classList.add('active');
+      showToast('🐶 Снуп вызван');
+    }
+    function adminTriggerPolice() {
+      state.heat = Math.max(state.heat, 50); state.policeActive = true;
+      if (typeof triggerPoliceRaid === 'function') triggerPoliceRaid();
+      save(); render(); showToast('👮 Рейд!');
+    }
+    function adminResetGame() {
+      if (!confirm('Полный сброс сохранения? Это нельзя отменить!')) return;
+      try { localStorage.removeItem('grow_sim_v4_' + userId); } catch(e) {}
+      location.reload();
+    }
+    async function adminLoadPlayers() {
+      const box = document.getElementById('admin-players-list');
+      if (!box) return;
+      box.innerHTML = 'Загрузка...';
+      try {
+        const r = await fetch((SERVER_URL || '') + '/api/leaderboard/yearly');
+        const data = await r.json();
+        if (!data.players || !data.players.length) {
+          box.innerHTML = '<div class="empty">Нет игроков на сервере</div>';
+          return;
+        }
+        box.innerHTML = data.players.map((p, i) =>
+          '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;">' +
+          '<span>#' + (i+1) + ' ' + p.name + ' Lv.' + p.level + '</span>' +
+          '<span style="color:var(--gold);">' + p.money + '$</span></div>'
+        ).join('');
+      } catch(e) {
+        box.innerHTML = '<div class="empty">Ошибка сервера</div>';
+      }
+    }
+    function adminSyncMe() {
+      if (typeof registerProfileOnServer === 'function') {
+        state.registered = false;
+        registerProfileOnServer();
+      }
+    }
+
+
+        window.openCrossModal = openCrossModal;
     window.openAchievementsModal = openAchievementsModal;
     window.openInvestModal = openInvestModal;
     window.openTradeModal = openTradeModal;
+    window.tryAdminLogin = tryAdminLogin;
+    window.adminLogout = adminLogout;
+    window.adminSetMoney = adminSetMoney;
+    window.adminAddMoney = adminAddMoney;
+    window.adminSetEnergy = adminSetEnergy;
+    window.adminFillEnergy = adminFillEnergy;
+    window.adminSetLevel = adminSetLevel;
+    window.adminSetHeat = adminSetHeat;
+    window.adminClearHeat = adminClearHeat;
+    window.adminInstantGrow = adminInstantGrow;
+    window.adminHealAll = adminHealAll;
+    window.adminClearPests = adminClearPests;
+    window.adminAddPots = adminAddPots;
+    window.adminGiveAllSeeds = adminGiveAllSeeds;
+    window.adminGiveAllLamps = adminGiveAllLamps;
+    window.adminGiveAllFerts = adminGiveAllFerts;
+    window.adminClearInventory = adminClearInventory;
+    window.adminGiveItem = adminGiveItem;
+    window.adminUnlockRoom = adminUnlockRoom;
+    window.adminMaxLevel = adminMaxLevel;
+    window.adminUnlockAchievements = adminUnlockAchievements;
+    window.adminAddInvestments = adminAddInvestments;
+    window.adminSetWeather = adminSetWeather;
+    window.adminToggleGod = adminToggleGod;
+    window.adminForceSnoop = adminForceSnoop;
+    window.adminTriggerPolice = adminTriggerPolice;
+    window.adminResetGame = adminResetGame;
+    window.adminLoadPlayers = adminLoadPlayers;
+    window.adminSyncMe = adminSyncMe;
     window.plantHybrid = plantHybrid;
     window.doCross = doCross;
     window.buyInvestment = buyInvestment;
