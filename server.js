@@ -477,7 +477,29 @@ app.post('/api/referral/claim', (req, res) => {
   }
 });
 
+// Статика: отдаём игру (index.html) с того же домена
+app.use(express.static(__dirname, {
+  index: false,
+  extensions: ['html']
+}));
+
 app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  // Если index.html ещё не залит — покажем статус API
+  res.json({
+    status: 'ok',
+    service: 'Weed Grow Simulator Backend v3',
+    message: 'index.html not found — upload the game file',
+    season: getCurrentSeason(),
+    weekId: getWeekId(),
+    referralRates: REF_RATES
+  });
+});
+
+app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'Weed Grow Simulator Backend v3',
@@ -492,10 +514,6 @@ app.get('/', (req, res) => {
       'POST /api/referral/claim'
     ]
   });
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
