@@ -227,14 +227,23 @@ app.post('/api/register', (req, res) => {
     const thcBonus = Math.max(0, Math.floor(Number(body.thcBonus) || 0));
     const totalEarned = Math.max(0, Math.floor(Number(body.totalEarned) || 0));
 
-    // Реферер — только при первой регистрации, нельзя сменить потом
+    // Реферер — только один раз, нельзя сменить
     let referredBy = existing.referredBy || null;
-    if (!referredBy && body.referredBy && body.referredBy !== userId) {
-      const parentId = String(body.referredBy).slice(0, 64);
-      // Принимаем даже если родитель ещё не в базе (зарегистрируется позже)
-      // Защита только от ссылки на самого себя
-      if (parentId && parentId !== userId && parentId.length >= 3) {
-        referredBy = parentId;
+    let referralBound = false;
+    if (!referredBy && body.referredBy) {
+      let parentId = String(body.referredBy).slice(0, 64).trim();
+      if (parentId.startsWith('ref_')) parentId = parentId.slice(4);
+      // нельзя быть своим рефералом
+      if (parentId && parentId !== userId && parentId.length >= 2 && parentId !== 'null') {
+        // защита от циклов: parent не должен иметь referredBy = userId (простая проверка)
+        const parent = players[parentId];
+        if (parent && parent.referredBy === userId) {
+          // цикл — игнор
+        } else {
+          referredBy = parentId;
+          referralBound = true;
+          console.log(`REF BIND ${userId} <- ${parentId}`);
+        }
       }
     }
 
@@ -277,6 +286,7 @@ app.post('/api/register', (req, res) => {
       weeklyEarned,
       weekId: playerWeekId,
       referredBy,
+      referralBoundAt: existing.referralBoundAt || (referralBound ? now : null),
       registeredAt: existing.registeredAt || now,
       lastActive: now,
       commissionClaimed: existing.commissionClaimed || 0,
@@ -316,6 +326,8 @@ app.post('/api/register', (req, res) => {
       seasonRg: profile.seasonRg,
       division: profile.division,
       referredBy: profile.referredBy,
+      referralBound: referralBound || false,
+      parentExists: !!(profile.referredBy && players[profile.referredBy]),
       referral: {
         downline,
         pending: commission.pending,
@@ -415,13 +427,17 @@ app.get('/api/referral/:userId', (req, res) => {
 
     const commission = calcPendingCommission(players, userId);
     const downline = countDownline(players, userId);
+    const weekId = getWeekId();
     const directs = getDirectReferrals(players, userId).slice(0, 50).map((p, i) => ({
       id: p.id,
       name: p.name,
       level: p.level || 1,
-      weeklyEarned: (p.weekId === getWeekId() ? p.weeklyEarned : 0) || 0,
+      money: p.money || 0,
+      weeklyEarned: (p.weekId === weekId ? p.weeklyEarned : 0) || 0,
       rate: getL1Rate(i),
-      registeredAt: p.registeredAt
+      registeredAt: p.registeredAt,
+      lastActive: p.lastActive || 0,
+      online: p.lastActive && (Date.now() - p.lastActive < 5 * 60 * 1000)
     }));
 
     res.json({
