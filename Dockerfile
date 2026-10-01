@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --production
 
-COPY server.js ./
+# Игра + API должны быть в образе
+COPY server.js index.html ./
 
 ENV DATA_DIR=/data
 ENV PORT=80
