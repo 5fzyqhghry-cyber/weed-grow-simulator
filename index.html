@@ -3961,6 +3961,8 @@
 
 
         function shareReferral() {
+      // Чтобы реферал засчитался — приглашающий должен быть на сервере
+      ensureRegisteredOnServer(true);
       const link = getRefLink();
       if (tg?.openTelegramLink) {
         tg.openTelegramLink(
@@ -3971,36 +3973,92 @@
     }
 
     function copyReferral() {
+      ensureRegisteredOnServer(true);
       const link = getRefLink();
       navigator.clipboard?.writeText(link).then(() => showToast('📋 Ссылка скопирована'));
     }
 
     function handleReferral() {
       let refId = null;
-      if (tg?.initDataUnsafe?.start_param) {
-        const param = tg.initDataUnsafe.start_param;
-        if (param.startsWith('ref_')) {
-          refId = param.replace('ref_', '');
+
+      // Telegram Mini App start_param (startapp=ref_XXX)
+      try {
+        const sp = tg?.initDataUnsafe?.start_param || tg?.initDataUnsafe?.startParam || '';
+        if (sp) {
+          if (String(sp).startsWith('ref_')) refId = String(sp).replace(/^ref_/, '');
+          else if (String(sp).startsWith('ref')) refId = String(sp).replace(/^ref/, '');
+          else refId = String(sp);
         }
-      }
+      } catch (e) {}
+
+      // URL ?ref= / ?tgWebAppStartParam=
       if (!refId) {
-        const urlParams = new URLSearchParams(window.location.search);
-        refId = urlParams.get('ref');
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          refId = urlParams.get('ref') || urlParams.get('tgWebAppStartParam') || null;
+          if (refId && String(refId).startsWith('ref_')) refId = String(refId).replace(/^ref_/, '');
+        } catch (e) {}
       }
-      if (state.referredBy) return;
+
+      // Hash fallback
+      if (!refId && window.location.hash) {
+        const m = window.location.hash.match(/ref[_=]([\w-]+)/);
+        if (m) refId = m[1];
+      }
+
       if (!refId) return;
-      if (refId === userId) return;
+      refId = String(refId).trim();
+      if (!refId || refId === userId || refId === 'null' || refId === 'undefined') return;
+
+      // Уже привязан к кому-то — не перезаписываем
+      if (state.referredBy && state.referredBy !== refId) return;
+
+      const isNew = !state.referredBy;
       state.referredBy = refId;
-      // Бонус новичка один раз
-      if (!state.referralWelcome) {
+
+      if (isNew && !state.referralWelcome) {
         state.referralWelcome = true;
         state.money += 100;
         state.energy = Math.min(state.maxEnergy, state.energy + 30);
         showToast('🎁 Бонус по ссылке! +100$ +30⚡');
       }
+
       save();
       render();
+
+      // Сразу регистрируем на сервере, чтобы попасть в сеть пригласившего
+      setTimeout(() => {
+        ensureRegisteredOnServer(true);
+      }, 500);
     }
+
+    /** Регистрация/синк на сервере (обязательно для рефералов) */
+    async function ensureRegisteredOnServer(force) {
+      try {
+        if (!force && state.registered) {
+          await syncWithServer();
+          return;
+        }
+        const response = await fetch(`${SERVER_URL}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getRatingPayload())
+        });
+        const data = await response.json();
+        if (data && data.success) {
+          state.registered = true;
+          save();
+          updateRegisterBanner();
+          if (data.referredBy) {
+            showToast('✅ Ты в сети игрока!');
+          }
+          loadReferralStats();
+        }
+      } catch (e) {
+        console.log('ensureRegistered error', e);
+      }
+    }
+
 
     // ============================================================
     // ====== ПОТРЕБЛЕНИЕ ПРОДУКТОВ ======
@@ -4144,7 +4202,10 @@
     handleReferral();
     render();
     setTimeout(() => loadLeaderboardFromServer(), 1000);
-    setTimeout(() => loadReferralStats(), 1500);
+    setTimeout(() => {
+      if (state.referredBy || state.registered) ensureRegisteredOnServer(true);
+      loadReferralStats();
+    }, 1500);
     updateRegisterBanner();
     checkAdminSession();
     // Secret: 5 taps on XP badge
@@ -4184,6 +4245,7 @@
     window.copyReferral = copyReferral;
     window.loadLeaderboardFromServer = loadLeaderboardFromServer;
     window.registerProfileOnServer = registerProfileOnServer;
+    window.ensureRegisteredOnServer = ensureRegisteredOnServer;
     window.acceptSnoop = acceptSnoop;
     window.rejectSnoop = rejectSnoop;
     window.addFriend = addFriend;
