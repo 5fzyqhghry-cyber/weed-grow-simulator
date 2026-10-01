@@ -1682,6 +1682,9 @@
 
     function save() {
       state.lastUpdate = Date.now();
+      state.money = Math.max(0, Math.floor(Number(state.money) || 0));
+      state.energy = Math.max(0, Math.min(state.maxEnergy || 100, Math.floor(Number(state.energy) || 0)));
+      state.heat = Math.max(0, Math.min(100, Number(state.heat) || 0));
       try { localStorage.setItem('grow_sim_v4_' + userId, JSON.stringify(state)); } catch (e) {}
       if (state.registered) {
         try {
@@ -2819,8 +2822,8 @@
       const pot = state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
-      if (!godMode && state.energy < 2) { showToast('Нужно 2⚡', true); return; }
-      if (!godMode) state.energy -= 2;
+      if (!godMode && Math.floor(state.energy) < 2) { showToast('Нужно 2⚡', true); return; }
+      if (!godMode) state.energy = Math.floor(state.energy) - 2;
       pot.water = Math.min(100, pot.water + 45);
       showToast('💧 Полито!');
       haptic('medium');
@@ -2964,8 +2967,12 @@
       if (typeof guardJailAction === "function" && guardJailAction()) return;
       const s = getStrain(sid);
       if (!s) return;
-      if (state.money < s.seedPrice || state.energy < s.energyCost) {
-        showToast('Не хватает ресурсов', true);
+      if (state.level < (s.unlock || 1)) {
+        showToast('Нужен уровень ' + s.unlock, true);
+        return;
+      }
+      if (Math.floor(state.money) < s.seedPrice || Math.floor(state.energy) < s.energyCost) {
+        showToast('Не хватает ресурсов (нужно ' + s.seedPrice + '$ и ' + s.energyCost + '⚡)', true);
         return;
       }
       const pot = state.pots.find(p => p.id === selectedPotId);
@@ -2973,8 +2980,8 @@
         showToast('Горшок занят или неактивен', true);
         return;
       }
-      state.money -= s.seedPrice;
-      state.energy -= s.energyCost;
+      state.money = Math.floor(state.money) - s.seedPrice;
+      state.energy = Math.floor(state.energy) - s.energyCost;
       pot.strain = sid;
       pot.plantedAt = Date.now();
       pot.water = 80;
@@ -3056,8 +3063,8 @@
       if (typeof guardJailAction === "function" && guardJailAction()) return;
       const l = getLamp(lid);
       if (!l) return;
-      if (state.money < l.price) { showToast('Мало денег', true); return; }
-      state.money -= l.price;
+      if (Math.floor(state.money) < l.price) { showToast('Мало денег (нужно ' + l.price + '$)', true); return; }
+      state.money = Math.floor(state.money) - l.price;
       state.lamps[lid] = (state.lamps[lid] || 0) + 1;
       showToast('💡 Куплена: ' + l.emoji + ' ' + l.name);
       haptic('medium');
@@ -3068,8 +3075,8 @@
     function buyFert(fid) {
       const f = getFert(fid);
       if (!f) return;
-      if (state.money < f.price) { showToast('Мало денег', true); return; }
-      state.money -= f.price;
+      if (Math.floor(state.money) < f.price) { showToast('Мало денег (нужно ' + f.price + '$)', true); return; }
+      state.money = Math.floor(state.money) - f.price;
       state.ferts[fid] = (state.ferts[fid] || 0) + 1;
       showToast('🧪 Куплено: ' + f.emoji + ' ' + f.name);
       save();
@@ -3077,8 +3084,8 @@
     }
 
     function buyEnergy() {
-      if (state.money < 80) { showToast('Мало денег', true); return; }
-      state.money -= 80;
+      if (Math.floor(state.money) < 80) { showToast('Мало денег', true); return; }
+      state.money = Math.floor(state.money) - 80;
       state.energy = Math.min(state.maxEnergy, state.energy + 50);
       showToast('⚡ +50 энергии');
       save();
@@ -3087,11 +3094,14 @@
 
     function buyRoomUpgrade(uid) {
       const u = ROOM_UPGRADES.find(x => x.id === uid);
-      if (!u || state.money < u.price) { showToast('Мало денег', true); return; }
+      if (!u) return;
+      if (!state.room) state.room = { vent: false, auto: false, heater: false };
+      const price = Math.floor(u.price || 0);
+      if (Math.floor(state.money) < price) { showToast('Мало денег (нужно ' + price + '$)', true); return; }
       if (u.type === 'vent' && state.room.vent) { showToast('Уже куплено'); return; }
       if (u.type === 'auto' && state.room.auto) { showToast('Уже куплено'); return; }
       if (u.type === 'heater' && state.room.heater) { showToast('Уже куплено'); return; }
-      state.money -= u.price;
+      state.money = Math.floor(state.money) - price;
       if (u.type === 'vent') state.room.vent = true;
       if (u.type === 'auto') state.room.auto = true;
       if (u.type === 'heater') state.room.heater = true;
@@ -3227,8 +3237,14 @@
         }
       }
       if (!items) { showToast('Склад пуст', true); return; }
+      // Удаляем только то, что реально продали
+      for (const [id, amt] of Object.entries(state.inventory)) {
+        if (amt <= 0) { delete state.inventory[id]; continue; }
+        const s = getStrain(id);
+        const info = s ? null : getProductInfo(id);
+        if (s || info) delete state.inventory[id];
+      }
       addMoney(total);
-      state.inventory = {};
       showToast('💰 Продано за ' + total + '$');
       haptic('success');
       addXp(Math.floor(total / 10));
@@ -4021,7 +4037,9 @@
       if (tier === 2) {
         message.innerHTML = '📞 <b>ПРЕДУПРЕЖДЕНИЕ УЧАСТКА</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Штраф за игнор: <b>' + fine + '$</b>';
         addPoliceBtn(optionsDiv, 'btn-gold', '✅ Уплатить штраф (' + fine + '$)', () => handlePoliceChoice('pay_fine', { fine, tier }));
-        addPoliceBtn(optionsDiv, 'btn-secondary', '🌀 Снизить палево (вентиляция −15)', () => handlePoliceChoice('vent_boost', { tier }));
+        if (state.room && state.room.vent) {
+          addPoliceBtn(optionsDiv, 'btn-secondary', '🌀 Вентиляция (−25% палева)', () => handlePoliceChoice('vent_boost', { tier }));
+        }
         addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать', () => handlePoliceChoice('ignore', { fine, tier }));
       } else if (tier === 3) {
         message.innerHTML = '🚨 <b>ОБЫСК</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Выбери действие:';
@@ -4114,18 +4132,33 @@
 
       switch (choice) {
         case 'pay_fine': {
-          const fine = Math.min(state.money, opts.fine || calcPoliceFine(tier));
-          state.money = Math.max(0, state.money - fine);
-          state.heat = Math.max(0, state.heat - (15 + tier * 10));
-          state.policeWarningsIgnored = Math.max(0, (state.policeWarningsIgnored || 0) - 1);
-          message = '💵 Штраф ' + fine + '$ уплачен. Палево снижено.';
-          haptic('success');
+          const need = Math.max(0, Math.floor(opts.fine || calcPoliceFine(tier)));
+          const have = Math.floor(state.money || 0);
+          if (have < need) {
+            // Частичная оплата — слабый эффект
+            const paid = have;
+            state.money = 0;
+            const ratio = need > 0 ? paid / need : 0;
+            state.heat = Math.max(0, state.heat - Math.floor((15 + tier * 10) * ratio));
+            message = '💵 Частично: ' + paid + '$ из ' + need + '$. Палево снижено слабо.';
+            haptic('warning');
+          } else {
+            state.money = have - need;
+            state.heat = Math.max(0, state.heat - (15 + tier * 10));
+            state.policeWarningsIgnored = Math.max(0, (state.policeWarningsIgnored || 0) - 1);
+            message = '💵 Штраф ' + need + '$ уплачен. Палево снижено.';
+            haptic('success');
+          }
           break;
         }
         case 'vent_boost': {
-          state.heat = Math.max(0, state.heat - 15);
-          if (state.room && state.room.vent) state.heat = Math.max(0, state.heat - 10);
-          message = '🌀 Палево снижено. ' + (state.room && state.room.vent ? '(вентиляция помогла)' : 'Купи вентиляцию!');
+          if (!(state.room && state.room.vent)) {
+            message = '❌ Вентиляция не куплена! Купи в «Комната».';
+            haptic('error');
+            break;
+          }
+          state.heat = Math.max(0, state.heat - 25);
+          message = '🌀 Вентиляция сработала: палево −25%';
           haptic('success');
           break;
         }
