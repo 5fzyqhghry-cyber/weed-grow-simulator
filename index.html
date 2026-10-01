@@ -1284,7 +1284,7 @@
       edible: { name: 'Еда', emoji: '🍪', mult: 2.8, energy: 10, from: 'dried', need: 3 }
     };
 
-    const STAGE_NAMES = ['', '🌱 Семя', '🌿 Росток', '🌳 Вегетация', '🌸 Цветение', '✨ Готово'];
+    const STAGE_NAMES = ['', '🌱 Росток', '🌿 Молодое', '🌳 Вегетация', '🌸 Цветение', '✨ Готово'];
     const STAGE_EMOJI = ['', '🌱', '🌿', '🌳', '🌸', '✨'];
 
     const ACHIEVEMENTS = [
@@ -2134,58 +2134,159 @@
     // ====== РАСТЕНИЯ ======
     // ============================================================
     function getPlantSVG(strainId, stage, health, disease, ready, pests, thc, water) {
+      // Цвета сортов (лист / тёмный / бутон)
       const colors = {
-        skunk: { leaf: '#4caf50', dark: '#2e7d32', flower: '#8bc34a' },
-        haze: { leaf: '#7b1fa2', dark: '#4a148c', flower: '#ce93d8' },
-        widow: { leaf: '#e8f5e9', dark: '#a5d6a7', flower: '#ffffff' },
-        alien: { leaf: '#00bcd4', dark: '#006064', flower: '#4dd0e1' },
-        og: { leaf: '#f57c00', dark: '#e65100', flower: '#ffcc80' },
-        cheese: { leaf: '#fdd835', dark: '#f9a825', flower: '#ffee58' },
-        lemon: { leaf: '#c0ca33', dark: '#827717', flower: '#fff176' },
-        blue: { leaf: '#42a5f5', dark: '#0d47a1', flower: '#90caf9' },
-        cookies: { leaf: '#8d6e63', dark: '#4e342e', flower: '#a1887f' },
-        gelato: { leaf: '#ce93d8', dark: '#6a1b9a', flower: '#e1bee7' },
-        wedding: { leaf: '#ef9a9a', dark: '#b71c1c', flower: '#ffcdd2' },
-        runtz: { leaf: '#ffab91', dark: '#bf360c', flower: '#ffccbc' },
-        zkittlez: { leaf: '#80cbc4', dark: '#00695c', flower: '#b2dfdb' },
-        kush: { leaf: '#a5d6a7', dark: '#1b5e20', flower: '#c8e6c9' },
-        glue: { leaf: '#78909c', dark: '#263238', flower: '#b0bec5' }
+        skunk:   { leaf: '#3d9a45', dark: '#1b5e20', bud: '#7cb342', tip: '#cddc39' },
+        haze:    { leaf: '#7b1fa2', dark: '#4a148c', bud: '#ab47bc', tip: '#e1bee7' },
+        widow:   { leaf: '#81c784', dark: '#2e7d32', bud: '#e8f5e9', tip: '#ffffff' },
+        alien:   { leaf: '#00acc1', dark: '#006064', bud: '#26c6da', tip: '#b2ebf2' },
+        og:      { leaf: '#ef6c00', dark: '#e65100', bud: '#ffa726', tip: '#ffe0b2' },
+        cheese:  { leaf: '#f9a825', dark: '#f57f17', bud: '#fdd835', tip: '#fff59d' },
+        lemon:   { leaf: '#c0ca33', dark: '#827717', bud: '#dce775', tip: '#f0f4c3' },
+        blue:    { leaf: '#1e88e5', dark: '#0d47a1', bud: '#64b5f6', tip: '#bbdefb' },
+        cookies: { leaf: '#8d6e63', dark: '#4e342e', bud: '#a1887f', tip: '#d7ccc8' },
+        gelato:  { leaf: '#8e24aa', dark: '#4a148c', bud: '#ce93d8', tip: '#f3e5f5' },
+        wedding: { leaf: '#e53935', dark: '#b71c1c', bud: '#ef9a9a', tip: '#ffcdd2' },
+        runtz:   { leaf: '#ff7043', dark: '#bf360c', bud: '#ffab91', tip: '#ffccbc' },
+        zkittlez:{ leaf: '#00897b', dark: '#004d40', bud: '#4db6ac', tip: '#b2dfdb' },
+        kush:    { leaf: '#43a047', dark: '#1b5e20', bud: '#81c784', tip: '#c8e6c9' },
+        glue:    { leaf: '#546e7a', dark: '#263238', bud: '#90a4ae', tip: '#cfd8dc' }
       };
       const c = colors[strainId] || colors.skunk;
-      const hf = Math.max(0.3, health / 100);
-      const isSick = disease;
-      const hasPests = pests;
-      const s = stage || 0;
+      const hf = Math.max(0.35, (health || 100) / 100);
+      const s = Math.min(5, Math.max(0, stage || 0));
       const thcLevel = Math.min(100, thc || 0);
-      const isDry = water < 20;
+      const isDry = (water || 100) < 20;
+      const isSick = !!disease;
+      const hasPests = !!pests;
 
-      let leafColor = c.leaf;
-      if (isDry) leafColor = '#8d6e63';
-      else if (health < 50) leafColor = '#a1887f';
-      else if (thcLevel > 70) leafColor = '#66bb6a';
+      // Базовый цвет листа
+      let leaf = c.leaf;
+      let dark = c.dark;
+      let bud = c.bud;
+      if (isDry) { leaf = '#8d6e63'; dark = '#5d4037'; bud = '#a1887f'; }
+      else if (health < 40) { leaf = '#9e9e9e'; dark = '#616161'; bud = '#bdbdbd'; }
+      else if (isSick) { leaf = '#9ccc65'; dark = '#558b2f'; }
 
-      let svg = '';
-      let pestEmoji = hasPests ? '<text x="15" y="15" font-size="14">🐛</text>' : '';
-      let thcText = thcLevel > 0 ?
-        `<text x="50" y="20" font-size="8" text-anchor="middle" fill="#ce93d8">${Math.round(thcLevel)}%</text>` : '';
-
-      if (s === 1) {
-        svg =
-          `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="85" rx="20" ry="5" fill="#3e2723" opacity="0.3"/><ellipse cx="50" cy="78" rx="6" ry="8" fill="#2e7d32" opacity="${hf*0.8}"/><path d="M50 78 L48 68 L52 68 Z" fill="#1b5e20" opacity="0.5"/>${pestEmoji}</svg>`;
-      } else if (s === 2) {
-        svg =
-          `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="90" rx="25" ry="5" fill="#3e2723" opacity="0.3"/><line x1="50" y1="85" x2="50" y2="60" stroke="${c.dark}" stroke-width="2.5" opacity="${hf}"/><path d="M50 65 Q38 60 32 70 Q40 66 50 65" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 65 Q62 60 68 70 Q60 66 50 65" fill="${leafColor}" opacity="${hf*0.7}"/>${isSick ? `<circle cx="50" cy="70" r="8" fill="none" stroke="#e53935" stroke-width="1.5" opacity="0.5"><animate attributeName="r" from="6" to="10" dur="0.8s" repeatCount="indefinite"/></circle>` : ''}${pestEmoji}</svg>`;
-      } else if (s === 3) {
-        svg =
-          `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="92" rx="28" ry="5" fill="#3e2723" opacity="0.3"/><line x1="50" y1="88" x2="50" y2="45" stroke="${c.dark}" stroke-width="3" opacity="${hf}"/><path d="M50 55 Q32 45 22 60 Q35 55 50 55" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 55 Q68 45 78 60 Q65 55 50 55" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 50 Q35 40 28 52 Q40 48 50 50" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 50 Q65 40 72 52 Q60 48 50 50" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 45 Q44 35 50 30 Q56 35 50 45" fill="${leafColor}" opacity="${hf*0.9}"/><path d="M50 48 Q40 38 35 45 Q42 42 50 48" fill="${leafColor}" opacity="${hf*0.6}"/><path d="M50 48 Q60 38 65 45 Q58 42 50 48" fill="${leafColor}" opacity="${hf*0.6}"/>${isSick ? `<circle cx="50" cy="60" r="12" fill="none" stroke="#e53935" stroke-width="1.5" opacity="0.5"><animate attributeName="r" from="10" to="14" dur="0.8s" repeatCount="indefinite"/></circle>` : ''}${hasPests ? `<circle cx="50" cy="65" r="14" fill="none" stroke="#ffb300" stroke-width="1.5" opacity="0.5"><animate attributeName="r" from="12" to="16" dur="0.6s" repeatCount="indefinite"/></circle>` : ''}${pestEmoji}${thcText}</svg>`;
-      } else if (s === 4) {
-        svg =
-          `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="94" rx="30" ry="5" fill="#3e2723" opacity="0.3"/><line x1="50" y1="90" x2="50" y2="35" stroke="${c.dark}" stroke-width="3.5" opacity="${hf}"/><path d="M50 50 Q28 38 18 55 Q32 48 50 50" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 50 Q72 38 82 55 Q68 48 50 50" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 45 Q30 32 22 48 Q36 40 50 45" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 45 Q70 32 78 48 Q64 40 50 45" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 38 Q42 28 50 22 Q58 28 50 38" fill="${leafColor}" opacity="${hf*0.9}"/><path d="M50 42 Q36 30 30 40 Q40 36 50 42" fill="${leafColor}" opacity="${hf*0.6}"/><path d="M50 42 Q64 30 70 40 Q60 36 50 42" fill="${leafColor}" opacity="${hf*0.6}"/><circle cx="50" cy="32" r="8" fill="${c.flower}" opacity="${hf*0.6}"/><circle cx="36" cy="40" r="5" fill="${c.flower}" opacity="${hf*0.5}"/><circle cx="64" cy="40" r="5" fill="${c.flower}" opacity="${hf*0.5}"/>${isSick ? `<circle cx="50" cy="55" r="16" fill="none" stroke="#e53935" stroke-width="1.5" opacity="0.5"><animate attributeName="r" from="14" to="18" dur="0.8s" repeatCount="indefinite"/></circle>` : ''}${hasPests ? `<circle cx="50" cy="60" r="18" fill="none" stroke="#ffb300" stroke-width="1.5" opacity="0.5"><animate attributeName="r" from="16" to="20" dur="0.6s" repeatCount="indefinite"/></circle>` : ''}${pestEmoji}${thcText}</svg>`;
-      } else if (s === 5) {
-        svg =
-          `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="94" rx="32" ry="5" fill="#3e2723" opacity="0.3"/><line x1="50" y1="90" x2="50" y2="28" stroke="${c.dark}" stroke-width="4" opacity="${hf}"/><path d="M50 45 Q22 30 12 50 Q28 40 50 45" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 45 Q78 30 88 50 Q72 40 50 45" fill="${leafColor}" opacity="${hf*0.8}"/><path d="M50 40 Q25 25 16 45 Q30 35 50 40" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 40 Q75 25 84 45 Q70 35 50 40" fill="${leafColor}" opacity="${hf*0.7}"/><path d="M50 32 Q40 20 50 15 Q60 20 50 32" fill="${leafColor}" opacity="${hf*0.9}"/><path d="M50 36 Q32 22 26 34 Q38 28 50 36" fill="${leafColor}" opacity="${hf*0.6}"/><path d="M50 36 Q68 22 74 34 Q62 28 50 36" fill="${leafColor}" opacity="${hf*0.6}"/><circle cx="50" cy="25" r="12" fill="${c.flower}" opacity="${hf*0.7}"/><circle cx="34" cy="35" r="7" fill="${c.flower}" opacity="${hf*0.6}"/><circle cx="66" cy="35" r="7" fill="${c.flower}" opacity="${hf*0.6}"/><circle cx="42" cy="40" r="5" fill="${c.flower}" opacity="${hf*0.5}"/><circle cx="58" cy="40" r="5" fill="${c.flower}" opacity="${hf*0.5}"/>${ready ? `<text x="50" y="12" font-size="14" text-anchor="middle" fill="#ffd700">✨</text>` : ''}${isSick ? `<circle cx="50" cy="55" r="20" fill="none" stroke="#e53935" stroke-width="1.5" opacity="0.4"><animate attributeName="r" from="18" to="22" dur="0.8s" repeatCount="indefinite"/></circle>` : ''}${hasPests ? `<circle cx="50" cy="60" r="22" fill="none" stroke="#ffb300" stroke-width="1.5" opacity="0.4"><animate attributeName="r" from="20" to="24" dur="0.6s" repeatCount="indefinite"/></circle>` : ''}${pestEmoji}${thcText}</svg>`;
+      // Готовое / перезрелое — желтоватый оттенок как на картинке
+      if (ready || s >= 5) {
+        leaf = isDry ? '#a1887f' : '#9ccc65';
+        dark = '#689f38';
+        bud = c.tip || '#cddc39';
       }
-      return svg;
+
+      // Классический лист каннабиса (path)
+      function cannabisLeaf(cx, cy, scale, rot, opacity) {
+        const t = `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`;
+        // 7-лопастный силуэт
+        return `<g transform="${t}" opacity="${opacity}">
+          <path d="M0,-18
+            C3,-14 5,-8 4,-2 L8,-10 C10,-6 9,0 6,4
+            L12,0 C12,4 8,8 4,8
+            L8,12 C6,14 2,14 0,12
+            L-8,12 C-6,14 -2,14 0,12
+            L-4,8 C-8,8 -12,4 -12,0
+            L-6,4 C-9,0 -10,-6 -8,-10
+            L-4,-2 C-5,-8 -3,-14 0,-18 Z"
+            fill="${leaf}" stroke="${dark}" stroke-width="0.6"/>
+          <line x1="0" y1="-16" x2="0" y2="10" stroke="${dark}" stroke-width="0.7" opacity="0.5"/>
+        </g>`;
+      }
+
+      function potBase() {
+        return `<ellipse cx="50" cy="92" rx="18" ry="4" fill="#3e2723" opacity="0.25"/>
+          <path d="M34,78 L36,90 Q50,94 64,90 L66,78 Z" fill="#5d4037"/>
+          <ellipse cx="50" cy="78" rx="16" ry="4" fill="#6d4c41"/>
+          <ellipse cx="50" cy="78" rx="13" ry="3" fill="#4e342e"/>`;
+      }
+
+      let body = '';
+      // ===== 4 ВИЗУАЛЬНЫЕ СТАДИИ =====
+      // stage 1: росток (семя/петля)
+      // stage 2: молодое (2–4 листа)
+      // stage 3: вегетация (куст)
+      // stage 4–5: цветение / готово (шишки)
+
+      if (s <= 1) {
+        // Росток
+        body = `
+          <line x1="50" y1="78" x2="50" y2="62" stroke="${dark}" stroke-width="1.8" opacity="${hf}"/>
+          <ellipse cx="50" cy="60" rx="3" ry="4" fill="${leaf}" opacity="${hf}"/>
+          <path d="M50,62 Q42,58 40,64" stroke="${leaf}" stroke-width="1.5" fill="none" opacity="${hf}"/>
+          <path d="M50,62 Q58,58 60,64" stroke="${leaf}" stroke-width="1.5" fill="none" opacity="${hf}"/>
+        `;
+      } else if (s === 2) {
+        // Молодое растение
+        body = `
+          <line x1="50" y1="78" x2="50" y2="48" stroke="${dark}" stroke-width="2.2" opacity="${hf}"/>
+          ${cannabisLeaf(50, 52, 0.55, -25, hf)}
+          ${cannabisLeaf(50, 52, 0.55, 25, hf)}
+          ${cannabisLeaf(50, 42, 0.4, 0, hf * 0.95)}
+        `;
+      } else if (s === 3) {
+        // Вегетация — пышный куст
+        body = `
+          <line x1="50" y1="78" x2="50" y2="28" stroke="${dark}" stroke-width="2.8" opacity="${hf}"/>
+          <line x1="50" y1="60" x2="38" y2="48" stroke="${dark}" stroke-width="1.6" opacity="${hf * 0.8}"/>
+          <line x1="50" y1="60" x2="62" y2="48" stroke="${dark}" stroke-width="1.6" opacity="${hf * 0.8}"/>
+          <line x1="50" y1="48" x2="40" y2="36" stroke="${dark}" stroke-width="1.4" opacity="${hf * 0.7}"/>
+          <line x1="50" y1="48" x2="60" y2="36" stroke="${dark}" stroke-width="1.4" opacity="${hf * 0.7}"/>
+          ${cannabisLeaf(38, 48, 0.7, -40, hf)}
+          ${cannabisLeaf(62, 48, 0.7, 40, hf)}
+          ${cannabisLeaf(40, 36, 0.6, -20, hf)}
+          ${cannabisLeaf(60, 36, 0.6, 20, hf)}
+          ${cannabisLeaf(50, 30, 0.75, 0, hf)}
+          ${cannabisLeaf(50, 55, 0.5, -15, hf * 0.9)}
+          ${cannabisLeaf(50, 55, 0.5, 15, hf * 0.9)}
+        `;
+      } else {
+        // Цветение / Готово — с шишками
+        const budOpacity = ready ? 1 : 0.85;
+        function bud(x, y, sc) {
+          return `<g transform="translate(${x},${y}) scale(${sc})" opacity="${budOpacity * hf}">
+            <ellipse cx="0" cy="0" rx="4" ry="7" fill="${bud}"/>
+            <ellipse cx="0" cy="-2" rx="2.5" ry="4" fill="${c.tip || '#cddc39'}" opacity="0.7"/>
+            <circle cx="-1.5" cy="1" r="0.8" fill="${dark}" opacity="0.4"/>
+            <circle cx="1.5" cy="-1" r="0.7" fill="${dark}" opacity="0.35"/>
+          </g>`;
+        }
+        body = `
+          <line x1="50" y1="78" x2="50" y2="18" stroke="${dark}" stroke-width="3" opacity="${hf}"/>
+          <line x1="50" y1="58" x2="34" y2="42" stroke="${dark}" stroke-width="1.8" opacity="${hf * 0.85}"/>
+          <line x1="50" y1="58" x2="66" y2="42" stroke="${dark}" stroke-width="1.8" opacity="${hf * 0.85}"/>
+          <line x1="50" y1="42" x2="36" y2="28" stroke="${dark}" stroke-width="1.5" opacity="${hf * 0.75}"/>
+          <line x1="50" y1="42" x2="64" y2="28" stroke="${dark}" stroke-width="1.5" opacity="${hf * 0.75}"/>
+          ${cannabisLeaf(34, 42, 0.75, -45, hf)}
+          ${cannabisLeaf(66, 42, 0.75, 45, hf)}
+          ${cannabisLeaf(36, 28, 0.65, -25, hf)}
+          ${cannabisLeaf(64, 28, 0.65, 25, hf)}
+          ${cannabisLeaf(50, 22, 0.8, 0, hf)}
+          ${cannabisLeaf(42, 50, 0.55, -20, hf * 0.9)}
+          ${cannabisLeaf(58, 50, 0.55, 20, hf * 0.9)}
+          ${bud(50, 14, 1.1)}
+          ${bud(42, 24, 0.85)}
+          ${bud(58, 24, 0.85)}
+          ${bud(36, 36, 0.7)}
+          ${bud(64, 36, 0.7)}
+          ${s >= 5 || ready ? bud(50, 32, 0.9) : ''}
+        `;
+      }
+
+      const pestMark = hasPests ? '<text x="12" y="18" font-size="12">🐛</text>' : '';
+      const sickMark = isSick ? '<text x="78" y="18" font-size="11">🦠</text>' : '';
+      const thcMark = thcLevel > 5
+        ? `<text x="50" y="12" font-size="7" text-anchor="middle" fill="#ce93d8" font-weight="700">${Math.round(thcLevel)}%</text>`
+        : '';
+      const readyGlow = (ready || s >= 5)
+        ? `<circle cx="50" cy="40" r="28" fill="#cddc39" opacity="0.08"/>`
+        : '';
+
+      return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        ${readyGlow}
+        ${potBase()}
+        <g opacity="${hf}">${body}</g>
+        ${pestMark}${sickMark}${thcMark}
+      </svg>`;
     }
 
     function tickPots() {
