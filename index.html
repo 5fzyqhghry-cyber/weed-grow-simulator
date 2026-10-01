@@ -1011,13 +1011,19 @@
     </div>
 
     <div class="section" id="section-leaderboard">
+      <div id="my-rating-card" style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;padding:14px;margin-bottom:10px;text-align:center;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);">🏆 Твой рейтинг (RG)</div>
+        <div id="my-rg-value" style="font-size:32px;font-weight:800;color:#ffd700;">0</div>
+        <div id="my-division" style="font-size:13px;font-weight:600;margin:4px 0;">🥉 Bronze</div>
+        <div id="my-rg-breakdown" style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:6px;line-height:1.6;"></div>
+      </div>
       <div class="register-banner">
         <div class="title">📝 Зарегистрируйся в рейтинге!</div>
-        <div class="desc">Нажми кнопку ниже, чтобы твой профиль появился в таблице лидеров</div>
+        <div class="desc">Профиль появится в таблице лидеров. Рейтинг = капитал + прогресс − палево</div>
         <button class="btn btn-register btn-full" onclick="registerProfileOnServer()" style="background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;font-weight:700">📝 Зарегистрироваться</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <button class="btn btn-small" id="lb-monthly" onclick="loadLeaderboardFromServer('monthly')" style="flex:1;">📅 Месяц</button>
+        <button class="btn btn-small" id="lb-monthly" onclick="loadLeaderboardFromServer('monthly')" style="flex:1;">📅 Сезон</button>
         <button class="btn btn-small" id="lb-yearly" onclick="loadLeaderboardFromServer('yearly')" style="flex:1;">📅 Год</button>
       </div>
       <div id="leaderboard-list"><div class="empty">📊 Загрузка...</div></div>
@@ -1026,14 +1032,25 @@
 
     <div class="section" id="section-friends">
       <div style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-weight:700;margin-bottom:3px;">👥 Пригласи друзей</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:4px;">За каждого: <b>+150$</b> и <b>+20⚡</b></div>
-        <div style="display:flex;justify-content:center;gap:10px;margin-bottom:4px;font-size:11px;">
-          <div>Приглашено: <b id="ref-count">0</b></div>
-          <div>Заработано: <b id="ref-earned">0</b>$</div>
+        <div style="font-weight:700;margin-bottom:3px;">👥 Реферальная сеть (5 уровней)</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.55);margin-bottom:6px;line-height:1.4;">
+          L1: <b>35%</b> (первые 10) · L2: <b>25%</b> · L3: <b>15%</b> · L4: <b>10%</b> · L5: <b>5%</b><br>
+          от <b>недельного</b> заработка структуры · бонус новичка: +100$ +30⚡
         </div>
-        <button class="btn btn-full" onclick="shareReferral()">📤 Поделиться</button>
+        <div style="display:flex;justify-content:center;gap:8px;margin-bottom:6px;font-size:10px;flex-wrap:wrap;">
+          <div>Прямых: <b id="ref-count">0</b></div>
+          <div>Сеть: <b id="ref-network">0</b></div>
+          <div>Всего: <b id="ref-earned">0</b>$</div>
+        </div>
+        <div id="ref-levels" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px;font-size:9px;"></div>
+        <div style="background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:8px;margin-bottom:8px;">
+          <div style="font-size:10px;color:rgba(255,255,255,0.7);">💰 Комиссия за неделю</div>
+          <div style="font-size:20px;font-weight:800;color:#ffd700;" id="ref-pending">0$</div>
+          <button class="btn btn-small btn-gold" style="margin-top:4px;" onclick="claimReferralCommission()" id="btn-ref-claim">🎁 Забрать</button>
+        </div>
+        <button class="btn btn-full" onclick="shareReferral()">📤 Поделиться ссылкой</button>
         <button class="btn btn-secondary btn-full" style="margin-top:3px;" onclick="copyReferral()">📋 Скопировать</button>
+        <button class="btn btn-secondary btn-full" style="margin-top:3px;" onclick="loadReferralStats()">🔄 Обновить сеть</button>
         <div id="friends-list" style="margin-top:6px;"></div>
       </div>
       <div style="margin-top:10px;">
@@ -1878,7 +1895,136 @@
     // ============================================================
     // ====== РЕГИСТРАЦИЯ НА СЕРВЕРЕ ======
     // ============================================================
-    async function registerProfileOnServer() {
+
+    // ============================================================
+    // ====== РЕЙТИНГОВАЯ СИСТЕМА (RG) ======
+    // ============================================================
+    function getCurrentSeason() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+
+    function calcNetWorth() {
+      let worth = state.money || 0;
+      // Горшки
+      (state.pots || []).forEach(p => {
+        const pl = POT_LEVELS.find(x => x.id === (p.potLevel || 1));
+        if (pl) worth += pl.price || 0;
+        if (p.lamp) {
+          const l = LAMPS.find(x => x.id === p.lamp);
+          if (l) worth += l.price || 0;
+        }
+      });
+      // Склад ламп/удобрений (половина цены — не переоцениваем)
+      for (const [id, qty] of Object.entries(state.lamps || {})) {
+        const l = LAMPS.find(x => x.id === id);
+        if (l) worth += (l.price || 0) * qty * 0.5;
+      }
+      for (const [id, qty] of Object.entries(state.ferts || {})) {
+        const f = FERTS.find(x => x.id === id);
+        if (f) worth += (f.price || 0) * qty * 0.5;
+      }
+      // Инвентарь сырья (рыночная оценка)
+      for (const [id, qty] of Object.entries(state.inventory || {})) {
+        const s = getStrain(id);
+        if (s) worth += (getMarketPrice(id) || s.sellPrice || 0) * qty * 0.7;
+        else {
+          const info = typeof getProductInfo === 'function' ? getProductInfo(id) : null;
+          if (info) worth += (info.sellPrice || 0) * qty * 0.7;
+        }
+      }
+      // Инвестиции: только вложенный капитал (без income×10 — иначе двойной счёт)
+      (state.investments || []).forEach(id => {
+        const inv = INVESTMENTS.find(i => i.id === id);
+        if (inv) worth += inv.price || 0;
+      });
+      return Math.floor(Math.max(0, worth));
+    }
+
+    function calcTHCBonus() {
+      return (state.pots || []).reduce((sum, p) => {
+        if (!p.strain || (p.stage || 0) < 4) return sum;
+        return sum + Math.floor((p.thc || 0) / 20);
+      }, 0);
+    }
+
+    function calcRG() {
+      const worth = calcNetWorth();
+      const level = state.level || 1;
+      const harvests = state.totalHarvests || 0;
+      const hybrids = (state.hybrids && state.hybrids.length) || 0;
+      const achievements = (state.achievements && state.achievements.length) || 0;
+      const investments = (state.investments && state.investments.length) || 0;
+      const heat = Math.floor(state.heat || 0);
+      const thcBonus = calcTHCBonus();
+
+      // Та же формула, что на сервере (сервер всё равно пересчитает)
+      return Math.max(0, Math.floor(
+        worth * 0.15 +
+        level * 400 +
+        harvests * 60 +
+        hybrids * 1200 +
+        achievements * 600 +
+        investments * 3000 +
+        thcBonus * 150 -
+        heat * 40
+      ));
+    }
+
+    function getDivision(rg) {
+      if (rg >= 1500000) return { id: 'legendary', name: 'Legendary', emoji: '👑', color: '#ffd700' };
+      if (rg >= 400000)  return { id: 'platinum',  name: 'Platinum',  emoji: '💎', color: '#b0bec5' };
+      if (rg >= 80000)   return { id: 'gold',      name: 'Gold',      emoji: '🥇', color: '#ffb300' };
+      if (rg >= 15000)   return { id: 'silver',    name: 'Silver',    emoji: '🥈', color: '#c0c0c0' };
+      return                   { id: 'bronze',    name: 'Bronze',    emoji: '🥉', color: '#cd7f32' };
+    }
+
+    function getRatingPayload() {
+      return {
+        userId: userId,
+        userName: getUserName(),
+        money: Math.floor(state.money),
+        netWorth: calcNetWorth(),
+        level: state.level,
+        energy: Math.floor(state.energy),
+        harvests: state.totalHarvests || 0,
+        hybrids: (state.hybrids && state.hybrids.length) || 0,
+        achievements: (state.achievements && state.achievements.length) || 0,
+        investments: (state.investments && state.investments.length) || 0,
+        heat: Math.floor(state.heat || 0),
+        thcBonus: calcTHCBonus(),
+        totalEarned: Math.floor(state.totalEarned || 0),
+        referredBy: state.referredBy || null,
+        season: getCurrentSeason(),
+        lastActive: Date.now()
+      };
+    }
+
+    function renderMyRating() {
+      const rg = calcRG();
+      const div = getDivision(rg);
+      const el = document.getElementById('my-rg-value');
+      const divEl = document.getElementById('my-division');
+      const br = document.getElementById('my-rg-breakdown');
+      if (el) el.textContent = rg.toLocaleString('ru-RU');
+      if (divEl) {
+        divEl.textContent = div.emoji + ' ' + div.name;
+        divEl.style.color = div.color;
+      }
+      if (br) {
+        const worth = calcNetWorth();
+        br.innerHTML =
+          '💰 Капитал: ' + worth.toLocaleString('ru-RU') +
+          ' · 🏆 Ур.: ' + ((state.level || 1) * 400) +
+          ' · 🌿 Урожаи: ' + ((state.totalHarvests || 0) * 60) + '<br>' +
+          '🧬 Гибриды: ' + (((state.hybrids && state.hybrids.length) || 0) * 1200) +
+          ' · 📈 Инвест: ' + (((state.investments && state.investments.length) || 0) * 3000) +
+          ' · 👮 −' + (Math.floor(state.heat || 0) * 40);
+      }
+    }
+
+
+        async function registerProfileOnServer() {
       if (state.registered) {
         showToast('✅ Ты уже зарегистрирован на сервере!');
         return;
@@ -1888,29 +2034,22 @@
         const response = await fetch(`${SERVER_URL}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,
-            userName: getUserName(),
-            money: Math.floor(state.money),
-            level: state.level,
-            energy: Math.floor(state.energy),
-            harvests: state.totalHarvests || 0
-          })
+          body: JSON.stringify(getRatingPayload())
         });
         const data = await response.json();
         if (data.success) {
           state.registered = true;
-          showToast('✅ Профиль зарегистрирован на сервере!');
+          showToast('✅ В рейтинге! RG: ' + (data.rg || calcRG()).toLocaleString('ru-RU'));
           haptic('success');
           save();
           render();
           updateRegisterBanner();
           loadLeaderboardFromServer();
         } else {
-          showToast('❌ Ошибка регистрации: ' + (data.error || 'неизвестная ошибка'), true);
+          showToast('❌ Ошибка: ' + (data.error || 'неизвестная'), true);
         }
       } catch (e) {
-        showToast('❌ Сервер недоступен! Проверь интернет.', true);
+        showToast('❌ Сервер недоступен', true);
       }
     }
 
@@ -1920,14 +2059,7 @@
         await fetch(`${SERVER_URL}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,
-            userName: getUserName(),
-            money: Math.floor(state.money),
-            level: state.level,
-            energy: Math.floor(state.energy),
-            harvests: state.totalHarvests || 0
-          })
+          body: JSON.stringify(getRatingPayload())
         });
       } catch (e) {}
     }
@@ -1936,7 +2068,7 @@
       const list = document.getElementById('leaderboard-list');
       const myRank = document.getElementById('my-rank');
       if (!list) return;
-      list.innerHTML = '<div class="empty">📊 Загрузка с сервера...</div>';
+      list.innerHTML = '<div class="empty">📊 Загрузка...</div>';
       if (myRank) myRank.style.display = 'none';
       try {
         const response = await fetch(`${SERVER_URL}/api/leaderboard/${period}`);
@@ -1947,15 +2079,18 @@
           data.players.forEach((player, index) => {
             const pos = index + 1;
             const isMe = player.id === userId;
-            const rankClass = pos === 1 ? 'rank-card top1' : pos === 2 ? 'rank-card top2' : pos === 3 ?
-              'rank-card top3' : 'rank-card';
-            const badge = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
             if (isMe) myPosition = pos;
+            const divEmoji = player.divisionEmoji || '🥉';
+            const rg = player.rg != null ? player.rg : (player.money || 0);
+            const rankClass = pos === 1 ? 'rank-card top1' : pos === 2 ? 'rank-card top2' : pos === 3 ? 'rank-card top3' : 'rank-card';
+            const badge = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
             html += `
                   <div class="${rankClass}" style="${isMe ? 'border:2px solid var(--gold);' : ''}">
                       <span class="rank-pos">${pos}</span>
                       <span class="rank-badge">${badge}</span>
-                      <span class="rank-name">${player.name} ${isMe ? '⭐' : ''}</span>
+                      <span class="rank-name">${divEmoji} ${player.name} ${isMe ? '⭐' : ''}
+                        <div style="font-size:8px;color:var(--hint);">RG: ${Number(rg).toLocaleString('ru-RU')}</div>
+                      </span>
                       <span class="rank-level">Lv.${player.level}</span>
                       <span class="rank-money">💰${player.money}</span>
                   </div>
@@ -1963,10 +2098,13 @@
           });
           list.innerHTML = html;
           if (myRank && myPosition > 0) {
+            const myRG = calcRG();
+            const myDiv = getDivision(myRG);
             myRank.innerHTML = `
                   <div class="my-rank">
                       <div style="font-size:10px;color:var(--hint);">👑 Ваше место</div>
-                      <div style="font-size:20px;font-weight:700;color:var(--gold);">#${myPosition}</div>
+                      <div style="font-size:20px;font-weight:700;color:${myDiv.color};">#${myPosition}</div>
+                      <div style="font-size:10px;color:var(--hint);">${myDiv.emoji} ${myDiv.name} · RG: ${myRG.toLocaleString('ru-RU')}</div>
                       <div style="font-size:9px;color:var(--hint);">из ${data.players.length} игроков</div>
                   </div>
               `;
@@ -3433,8 +3571,12 @@
     }
 
     function renderFriends() {
-      document.getElementById('ref-count').textContent = state.referrals || 0;
-      document.getElementById('ref-earned').textContent = state.referralEarned || 0;
+      const rc = document.getElementById('ref-count');
+      const re = document.getElementById('ref-earned');
+      const rp = document.getElementById('ref-pending');
+      if (rc) rc.textContent = state.referrals || 0;
+      if (re) re.textContent = state.referralEarned || 0;
+      if (rp) rp.textContent = (state.refPending || 0) + '$';
       const container = document.getElementById('friends-list');
       if (!container) return;
       const friends = state.referralsList || [];
@@ -3555,6 +3697,7 @@
       updateBonusTimer();
       updateGameTime();
       checkAchievements();
+      if (typeof renderMyRating === 'function') renderMyRating();
     }
 
     // ============================================================
@@ -3727,7 +3870,97 @@
       return window.location.origin + '/?ref=' + userId;
     }
 
-    function shareReferral() {
+
+    // ============================================================
+    // ====== РЕФЕРАЛЬНАЯ ПИРАМИДА ======
+    // ============================================================
+    async function loadReferralStats() {
+      try {
+        const r = await fetch(`${SERVER_URL}/api/referral/${encodeURIComponent(userId)}`);
+        const data = await r.json();
+        if (!data || data.success === false) return;
+
+        const downline = data.downline || [0, 0, 0, 0, 0];
+        const totalNetwork = downline.reduce((a, b) => a + b, 0);
+        const rates = data.rates || [0.35, 0.25, 0.15, 0.10, 0.05];
+
+        const rc = document.getElementById('ref-count');
+        const rn = document.getElementById('ref-network');
+        const re = document.getElementById('ref-earned');
+        const rp = document.getElementById('ref-pending');
+        if (rc) rc.textContent = downline[0] || 0;
+        if (rn) rn.textContent = totalNetwork;
+        if (re) re.textContent = Math.floor(data.totalEarned || 0);
+        if (rp) rp.textContent = Math.floor(data.pending || 0) + '$';
+
+        const levelsEl = document.getElementById('ref-levels');
+        if (levelsEl) {
+          levelsEl.innerHTML = downline.map((cnt, i) => {
+            const pct = Math.round((rates[i] || 0) * 100);
+            return `<div style="background:rgba(255,255,255,0.08);border-radius:6px;padding:4px 2px;">
+              <div style="font-weight:700;">L${i + 1}</div>
+              <div style="color:#ffd700;">${cnt}</div>
+              <div style="opacity:0.6;">${pct}%</div>
+            </div>`;
+          }).join('');
+        }
+
+        // Список прямых
+        const list = document.getElementById('friends-list');
+        if (list && data.directs) {
+          if (!data.directs.length) {
+            list.innerHTML = `<div style="color:var(--hint);font-size:10px;text-align:center;padding:8px;">
+              👤 Пока нет прямых рефералов<br>
+              <span style="font-size:8px;">Отправь ссылку — с первых 10 будет 35% от их недельного заработка</span>
+            </div>`;
+          } else {
+            list.innerHTML = '<div style="font-size:10px;font-weight:600;color:var(--hint);margin-top:4px;">👥 Прямые (L1)</div>' +
+              data.directs.map(d => `
+                <div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px;display:flex;justify-content:space-between;">
+                  <span>${d.name} · Lv.${d.level}</span>
+                  <span style="color:var(--gold);">${Math.round(d.rate * 100)}% · ${Math.floor(d.weeklyEarned || 0)}$/нед</span>
+                </div>
+              `).join('');
+          }
+        }
+
+        state.referrals = downline[0] || 0;
+        state.referralEarned = Math.floor(data.totalEarned || 0);
+        state.refPending = Math.floor(data.pending || 0);
+        save();
+      } catch (e) {
+        console.log('referral stats error', e);
+      }
+    }
+
+    async function claimReferralCommission() {
+      try {
+        showToast('⏳ Забираем комиссию...');
+        const r = await fetch(`${SERVER_URL}/api/referral/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        const data = await r.json();
+        if (data.success && data.claimed > 0) {
+          state.money += data.claimed;
+          state.referralEarned = data.totalEarned || (state.referralEarned || 0) + data.claimed;
+          state.refPending = 0;
+          showToast('🎁 Комиссия: +' + data.claimed + '$');
+          haptic('success');
+          save();
+          render();
+          loadReferralStats();
+        } else {
+          showToast(data.message || 'Нечего забирать', true);
+        }
+      } catch (e) {
+        showToast('❌ Сервер недоступен', true);
+      }
+    }
+
+
+        function shareReferral() {
       const link = getRefLink();
       if (tg?.openTelegramLink) {
         tg.openTelegramLink(
@@ -3758,12 +3991,13 @@
       if (!refId) return;
       if (refId === userId) return;
       state.referredBy = refId;
-      state.money += 100;
-      state.energy = Math.min(state.maxEnergy, state.energy + 30);
-      state.referralsList.push({ name: 'Реферал', date: new Date().toISOString(), bonus: 150 });
-      state.referrals += 1;
-      state.referralEarned += 150;
-      showToast('🎁 Бонус новичка! +100$ +30⚡');
+      // Бонус новичка один раз
+      if (!state.referralWelcome) {
+        state.referralWelcome = true;
+        state.money += 100;
+        state.energy = Math.min(state.maxEnergy, state.energy + 30);
+        showToast('🎁 Бонус по ссылке! +100$ +30⚡');
+      }
       save();
       render();
     }
@@ -3863,8 +4097,11 @@
         document.getElementById('section-' + tabName).classList.add('active');
         if (tabName === 'market') renderMarket();
         if (tabName === 'leaderboard') loadLeaderboardFromServer();
-        if (tabName === 'friends') { renderSocial();
-          updateBonusTimer(); }
+        if (tabName === 'friends') {
+          renderSocial();
+          updateBonusTimer();
+          loadReferralStats();
+        }
         haptic('light');
       });
     });
@@ -3907,6 +4144,7 @@
     handleReferral();
     render();
     setTimeout(() => loadLeaderboardFromServer(), 1000);
+    setTimeout(() => loadReferralStats(), 1500);
     updateRegisterBanner();
     checkAdminSession();
     // Secret: 5 taps on XP badge
@@ -3941,6 +4179,8 @@
     window.processItem = processItem;
     window.consumeProduct = consumeProduct;
     window.shareReferral = shareReferral;
+    window.loadReferralStats = loadReferralStats;
+    window.claimReferralCommission = claimReferralCommission;
     window.copyReferral = copyReferral;
     window.loadLeaderboardFromServer = loadLeaderboardFromServer;
     window.registerProfileOnServer = registerProfileOnServer;
