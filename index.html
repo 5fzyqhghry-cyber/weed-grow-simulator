@@ -875,6 +875,16 @@
     </div>
   </div>
 
+  
+  <div class="modal-overlay" id="bribeModal">
+    <div class="modal">
+      <div class="modal-title">💵 Взятки полиции</div>
+      <div id="bribe-info" style="font-size:12px;color:var(--hint);text-align:center;margin-bottom:10px;line-height:1.5;"></div>
+      <div id="bribe-options" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button class="btn btn-secondary btn-full" style="margin-top:10px;" onclick="closeModal('bribeModal')">Закрыть</button>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="policeModal">
     <div class="modal">
       <div class="modal-title">👮 ПОЛИЦИЯ!</div>
@@ -974,6 +984,7 @@
       <div class="time-display">🕐 <span id="gameTime">12:00</span> <span id="dayPhase">☀️</span></div>
     </div>
     <div class="level-badge" id="xp-badge">0 XP</div>
+    <button class="btn btn-small" id="btn-music" onclick="toggleReggae()" style="margin-left:4px;min-width:36px;padding:4px 8px;" title="Регги">🎵</button>
   </div>
 
   <div class="tabs">
@@ -991,11 +1002,13 @@
 
   <div class="content">
     <div class="section active" id="section-farm">
-      <div id="police-warning" style="display:none;" class="police-alert">🚨 ВНИМАНИЕ! Высокий уровень палева! Полиция может нагрянуть!</div>
+      <div id="police-warning" style="display:none;" class="police-alert"></div>
+      <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
         <button class="btn btn-small btn-purple" onclick="openCrossModal()">🧬 Скрестить</button>
         <button class="btn btn-small btn-gold" onclick="openAchievementsModal()">🏆 Достижения</button>
         <button class="btn btn-small btn-pink" onclick="openInvestModal()">📈 Инвестиции</button>
+        <button class="btn btn-small btn-police" onclick="openBribeModal()" id="btn-bribe">💵 Взятка</button>
       </div>
       <div class="farm-grid" id="farm-grid"></div>
       <div style="margin-top:8px;text-align:center">
@@ -1420,6 +1433,13 @@
       lastHeatCheck: Date.now(),
       gameTime: 12 * 60,
       policeActive: false,
+      jailUntil: 0,
+      policeWarningsIgnored: 0,
+      lastPoliceTier: 0,
+      pendingPoliceFine: 0,
+      policeFavor: 0,
+      lastBribeTime: 0,
+      totalBribesPaid: 0,
       registered: false,
       waterReservoir: 100,
       weather: 'sunny',
@@ -1470,6 +1490,124 @@
         }
       } catch (e) {}
     }
+
+    // ===== СИРЕНА (Web Audio, без файлов) =====
+    let _audioCtx = null;
+    let _sirenNodes = null;
+
+    function getAudioCtx() {
+      if (!_audioCtx) {
+        try {
+          _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+          return null;
+        }
+      }
+      if (_audioCtx.state === 'suspended') {
+        _audioCtx.resume().catch(() => {});
+      }
+      return _audioCtx;
+    }
+
+    function stopSiren() {
+      if (_sirenNodes) {
+        try {
+          _sirenNodes.forEach(n => {
+            try { n.stop && n.stop(); } catch (e) {}
+            try { n.disconnect && n.disconnect(); } catch (e) {}
+          });
+        } catch (e) {}
+        _sirenNodes = null;
+      }
+    }
+
+    /** Классическая двухтональная сирена полиции */
+    function playSiren(durationSec) {
+      durationSec = durationSec || 4;
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      stopSiren();
+
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.18, now + 0.15);
+      master.gain.setValueAtTime(0.18, now + durationSec - 0.4);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+      master.connect(ctx.destination);
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+
+      // Чередование ~700Hz / ~900Hz (сирена)
+      const lfo = ctx.createOscillator();
+      lfo.type = 'square';
+      lfo.frequency.setValueAtTime(1.4, now); // скорость воя
+
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(120, now);
+      lfo.connect(lfoGain);
+
+      osc1.frequency.setValueAtTime(780, now);
+      lfoGain.connect(osc1.frequency);
+
+      osc2.frequency.setValueAtTime(620, now);
+      const lfoGain2 = ctx.createGain();
+      lfoGain2.gain.setValueAtTime(-80, now);
+      lfo.connect(lfoGain2);
+      lfoGain2.connect(osc2.frequency);
+
+      const g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.35, now);
+      const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.12, now);
+
+      osc1.connect(g1);
+      osc2.connect(g2);
+      g1.connect(master);
+      g2.connect(master);
+
+      osc1.start(now);
+      osc2.start(now);
+      lfo.start(now);
+      osc1.stop(now + durationSec);
+      osc2.stop(now + durationSec);
+      lfo.stop(now + durationSec);
+
+      _sirenNodes = [osc1, osc2, lfo, master, g1, g2, lfoGain, lfoGain2];
+
+      // Вибрация под сирену
+      try {
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 200, 100, 400]);
+        }
+      } catch (e) {}
+      try {
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        }
+      } catch (e) {}
+    }
+
+    function playWarningBeep() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(660, now + 0.12);
+      g.gain.setValueAtTime(0.12, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    }
+
 
     function formatTime(s) {
       if (s <= 0) return 'Готово!';
@@ -1583,6 +1721,14 @@
       if (!state.referralsList) state.referralsList = [];
       if (!state.gameTime) state.gameTime = 12 * 60;
       if (!state.policeActive) state.policeActive = false;
+      if (state.jailUntil === undefined) state.jailUntil = 0;
+      if (state.policeWarningsIgnored === undefined) state.policeWarningsIgnored = 0;
+      if (state.lastPoliceTier === undefined) state.lastPoliceTier = 0;
+      if (state.pendingPoliceFine === undefined) state.pendingPoliceFine = 0;
+      if (state.policeFavor === undefined) state.policeFavor = 0;
+      if (state.lastBribeTime === undefined) state.lastBribeTime = 0;
+      if (state.totalBribesPaid === undefined) state.totalBribesPaid = 0;
+      if (state.musicOn === undefined) state.musicOn = false;
       if (state.registered === undefined) state.registered = false;
       if (state.waterReservoir === undefined) state.waterReservoir = 100;
       if (!state.weather) state.weather = 'sunny';
@@ -2576,6 +2722,7 @@
     }
 
     function harvest(id) {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       const pot = state.pots.find(p => p.id === id);
       if (!pot) { showToast('Горшок не найден', true); return; }
       if (!pot.isActive) { showToast('Этот горшок неактивен', true); return; }
@@ -2631,6 +2778,7 @@
     // ====== ДЕЙСТВИЯ ======
     // ============================================================
     function waterPot(id) {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       const pot = state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
@@ -2776,6 +2924,7 @@
     }
 
     function plantSeed(sid) {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       const s = getStrain(sid);
       if (!s) return;
       if (state.money < s.seedPrice || state.energy < s.energyCost) {
@@ -2819,6 +2968,7 @@
 
     let _buyingPot = false;
     function buyPot() {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       if (_buyingPot) return;
       let maxLevel = 1;
       for (let i = 0; i < POT_LEVELS.length; i++) {
@@ -2866,6 +3016,7 @@
     }
 
     function buyLamp(lid) {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       const l = getLamp(lid);
       if (!l) return;
       if (state.money < l.price) { showToast('Мало денег', true); return; }
@@ -3016,6 +3167,7 @@
     }
 
     function sellAll() {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       let total = 0,
         items = 0;
       for (const [id, amt] of Object.entries(state.inventory)) {
@@ -3288,6 +3440,7 @@
     }
 
     function openSellModal(key) {
+      if (typeof guardJailAction === "function" && guardJailAction()) return;
       const amt = state.inventory[key] || 0;
       if (amt <= 0) return;
       const info = getProductInfo(key);
@@ -3426,147 +3579,619 @@
       document.getElementById('profile-time').textContent = timeStr + ' ' + phase;
     }
 
+
+    // ============================================================
+    // ====== ВЗЯТКИ (проактивные) ======
+    // ============================================================
+    function getBribeCooldownLeft() {
+      const cd = 3 * 60 * 1000; // 3 минуты реального времени
+      return Math.max(0, (state.lastBribeTime || 0) + cd - Date.now());
+    }
+
+    function getPoliceFavorLevel() {
+      const f = state.policeFavor || 0;
+      if (f >= 100) return { level: 5, name: 'Свои люди', bonus: 0.35 };
+      if (f >= 60)  return { level: 4, name: 'Хорошие связи', bonus: 0.25 };
+      if (f >= 30)  return { level: 3, name: 'Знакомый', bonus: 0.15 };
+      if (f >= 10)  return { level: 2, name: 'На примете', bonus: 0.08 };
+      return { level: 1, name: 'Чужой', bonus: 0 };
+    }
+
+    function getBribePackages() {
+      const favor = getPoliceFavorLevel();
+      const heat = Math.floor(state.heat || 0);
+      const disc = 1 - favor.bonus;
+      return [
+        {
+          id: 'small',
+          emoji: '💵',
+          name: 'Мелкая взятка',
+          cost: Math.max(50, Math.floor((80 + heat * 1.5) * disc)),
+          heatDrop: 12,
+          favorGain: 3,
+          desc: '−12% палева'
+        },
+        {
+          id: 'medium',
+          emoji: '💰',
+          name: 'Нормальная взятка',
+          cost: Math.max(150, Math.floor((200 + heat * 3) * disc)),
+          heatDrop: 28,
+          favorGain: 8,
+          desc: '−28% палева'
+        },
+        {
+          id: 'large',
+          emoji: '💼',
+          name: 'Крупная взятка',
+          cost: Math.max(400, Math.floor((450 + heat * 5 + state.money * 0.03) * disc)),
+          heatDrop: 50,
+          favorGain: 15,
+          desc: '−50% палева'
+        },
+        {
+          id: 'fix',
+          emoji: '🤝',
+          name: '«Договориться»',
+          cost: Math.max(250, Math.floor((300 + heat * 2) * disc)),
+          heatDrop: 20,
+          favorGain: 20,
+          desc: '−20% палева + много связей'
+        }
+      ];
+    }
+
+    function openBribeModal() {
+      if (typeof isInJail === 'function' && isInJail()) {
+        showToast('🔒 В тюрьме взятки не принимают', true);
+        return;
+      }
+      const info = document.getElementById('bribe-info');
+      const opts = document.getElementById('bribe-options');
+      const favor = getPoliceFavorLevel();
+      const cd = getBribeCooldownLeft();
+      if (info) {
+        info.innerHTML =
+          'Палево: <b>' + Math.floor(state.heat) + '%</b><br>' +
+          'Связи с полицией: <b>' + favor.name + '</b> (ур.' + favor.level + ', ' + Math.floor(state.policeFavor || 0) + ' очков)<br>' +
+          'Скидка на взятки: <b>' + Math.round(favor.bonus * 100) + '%</b><br>' +
+          (cd > 0 ? '⏳ Подожди ' + Math.ceil(cd / 1000) + ' сек.' : '✅ Можно дать взятку');
+      }
+      if (opts) {
+        const packages = getBribePackages();
+        opts.innerHTML = packages.map(p => {
+          const can = state.money >= p.cost && cd <= 0;
+          return `<button class="btn ${can ? 'btn-police' : 'btn-secondary'} btn-full" ${can ? '' : 'disabled style="opacity:0.5"'}
+            onclick="payProactiveBribe('${p.id}')">
+            ${p.emoji} ${p.name} — ${p.cost}$ · ${p.desc}
+          </button>`;
+        }).join('');
+      }
+      document.getElementById('bribeModal').classList.add('show');
+    }
+
+    function payProactiveBribe(packId) {
+      if (typeof isInJail === 'function' && isInJail()) return;
+      const cd = getBribeCooldownLeft();
+      if (cd > 0) {
+        showToast('⏳ Подожди ' + Math.ceil(cd / 1000) + ' сек.', true);
+        return;
+      }
+      const pack = getBribePackages().find(p => p.id === packId);
+      if (!pack) return;
+      if (state.money < pack.cost) {
+        showToast('Мало денег', true);
+        return;
+      }
+      state.money -= pack.cost;
+      state.totalBribesPaid = (state.totalBribesPaid || 0) + pack.cost;
+      state.heat = Math.max(0, (state.heat || 0) - pack.heatDrop);
+      state.policeFavor = Math.min(150, (state.policeFavor || 0) + pack.favorGain);
+      state.lastBribeTime = Date.now();
+      state.policeWarningsIgnored = Math.max(0, (state.policeWarningsIgnored || 0) - 1);
+      showToast(pack.emoji + ' Взятка! Палево −' + pack.heatDrop + '%, связи +' + pack.favorGain);
+      haptic('success');
+      closeModal('bribeModal');
+      save();
+      render();
+    }
+
+    // Скидка на взятки во время рейда от policeFavor
+    const _origCalcBribe = null;
+
+    // ============================================================
+    // ====== РЕГГИ (спокойный фон, Web Audio) ======
+    // ============================================================
+    let _reggaeTimer = null;
+    let _reggaeOn = false;
+
+    function toggleReggae() {
+      const ctx = getAudioCtx();
+      if (!ctx) {
+        showToast('Аудио недоступно', true);
+        return;
+      }
+      if (_reggaeOn) {
+        stopReggae();
+        showToast('🎵 Музыка выкл');
+      } else {
+        startReggae();
+        showToast('🎵 Регги вкл');
+      }
+      const btn = document.getElementById('btn-music');
+      if (btn) btn.textContent = _reggaeOn ? '🎶' : '🎵';
+      state.musicOn = _reggaeOn;
+      try { save(); } catch (e) {}
+    }
+
+    function stopReggae() {
+      _reggaeOn = false;
+      if (_reggaeTimer) {
+        clearInterval(_reggaeTimer);
+        _reggaeTimer = null;
+      }
+      const btn = document.getElementById('btn-music');
+      if (btn) btn.textContent = '🎵';
+    }
+
+    function startReggae() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      stopReggae();
+      _reggaeOn = true;
+      const btn = document.getElementById('btn-music');
+      if (btn) btn.textContent = '🎶';
+
+      // ~72 BPM, one-drop feel: bass on 1, skank on 2 and 4
+      const bpm = 72;
+      const beat = 60 / bpm;
+      let step = 0;
+
+      // Am - F - C - G (мягкий регги-ход)
+      const chords = [
+        [220.00, 261.63, 329.63], // A minor-ish
+        [174.61, 220.00, 261.63], // F
+        [130.81, 164.81, 196.00], // C
+        [196.00, 246.94, 293.66]  // G
+      ];
+      const bassNotes = [110.00, 87.31, 65.41, 98.00];
+
+      function tone(freq, start, dur, type, vol) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, start);
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.exponentialRampToValueAtTime(vol, start + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(start);
+        o.stop(start + dur + 0.02);
+      }
+
+      function tick() {
+        if (!_reggaeOn) return;
+        const ctx2 = getAudioCtx();
+        if (!ctx2) return;
+        const t = ctx2.currentTime;
+        const chord = chords[Math.floor(step / 4) % 4];
+        const bass = bassNotes[Math.floor(step / 4) % 4];
+        const beatInBar = step % 4;
+
+        // Bass on beat 1 (and soft on 3)
+        if (beatInBar === 0) {
+          tone(bass, t, beat * 0.9, 'triangle', 0.06);
+          tone(bass / 2, t, beat * 0.9, 'sine', 0.04);
+        } else if (beatInBar === 2) {
+          tone(bass * 1.01, t, beat * 0.5, 'triangle', 0.03);
+        }
+
+        // Offbeat skank on 2 and 4
+        if (beatInBar === 1 || beatInBar === 3) {
+          chord.forEach((f, i) => {
+            tone(f, t, beat * 0.35, 'sine', 0.025 - i * 0.004);
+          });
+        }
+
+        // Soft hi-hat noise substitute (short high sine)
+        if (beatInBar === 1 || beatInBar === 3) {
+          tone(8000 + Math.random() * 1000, t, 0.04, 'sine', 0.008);
+        }
+
+        step++;
+      }
+
+      // Immediate first beats
+      tick();
+      _reggaeTimer = setInterval(tick, beat * 1000);
+    }
+
+
+    // ============================================================
+    // ====== ПОЛИЦИЯ И ПАЛЕВО ======
+    // ============================================================
+    // Игровой день = 24*60 = 1440 игровых минут
+    const GAME_DAY = 24 * 60;
+    const JAIL_DAYS = 3;
+
+    function getHeatTier(h) {
+      h = Math.floor(h || 0);
+      if (h >= 98) return 5; // арест
+      if (h >= 85) return 4; // рейд
+      if (h >= 70) return 3; // обыск
+      if (h >= 50) return 2; // предупреждение
+      if (h >= 30) return 1; // внимание
+      return 0;              // чисто
+    }
+
+    function getHeatTierInfo(tier) {
+      const map = {
+        0: { name: 'Чисто', color: '#4caf50', text: '' },
+        1: { name: 'Внимание', color: '#ffb300', text: '👁 Соседи начинают замечать...' },
+        2: { name: 'Предупреждение', color: '#ff9800', text: '📞 Участок интересуется тобой' },
+        3: { name: 'Обыск', color: '#f44336', text: '🚨 Полиция у порога!' },
+        4: { name: 'Рейд', color: '#d32f2f', text: '🚔 РЕЙД! Действуй или сядешь!' },
+        5: { name: 'Арест', color: '#b71c1c', text: '🔒 АРЕСТ! 98%+ палева' }
+      };
+      return map[tier] || map[0];
+    }
+
+    function isInJail() {
+      return (state.jailUntil || 0) > (state.gameTime || 0);
+    }
+
+    function getJailRemaining() {
+      const left = Math.max(0, (state.jailUntil || 0) - (state.gameTime || 0));
+      const days = Math.floor(left / GAME_DAY);
+      const hours = Math.floor((left % GAME_DAY) / 60);
+      return { left, days, hours, text: days + 'д ' + hours + 'ч' };
+    }
+
     function updateHeat() {
       const now = Date.now();
-      const dt = (now - state.lastHeatCheck) / 1000;
+      const dt = Math.min(10, (now - (state.lastHeatCheck || now)) / 1000);
       state.lastHeatCheck = now;
-      let reduction = 0;
-      if (state.room.vent) reduction = 1;
+
+      // В тюрьме палево медленно падает, действия заблокированы
+      if (isInJail()) {
+        state.heat = Math.max(0, (state.heat || 0) - (dt / 60) * 0.8);
+        const jr = getJailRemaining();
+        const jb = document.getElementById('jail-banner');
+        if (jb) {
+          jb.style.display = 'block';
+          jb.textContent = '🔒 ТЮРЬМА: осталось ' + jr.text + ' (игрового времени)';
+        }
+        const heatEl = document.getElementById('heat');
+        if (heatEl) heatEl.textContent = Math.floor(state.heat);
+        // освобождение
+        if (!isInJail()) {
+          state.jailUntil = 0;
+          state.heat = Math.min(state.heat, 25);
+          stopSiren();
+          showToast('🔓 Ты вышел из тюрьмы. Палево снижено.');
+          haptic('success');
+          if (jb) jb.style.display = 'none';
+        }
+        updatePoliceWarningUI();
+        return;
+      } else {
+        const jb = document.getElementById('jail-banner');
+        if (jb) jb.style.display = 'none';
+      }
+
+      // Снижение палева
+      let reduction = 0.15; // естественный спад
+      if (state.room && state.room.vent) reduction += 1.0;
       if (state.heat > 0) {
         state.heat = Math.max(0, state.heat - (dt / 60) * reduction);
       }
-      const hours = Math.floor(state.gameTime / 60) % 24;
+
+      const hours = Math.floor((state.gameTime || 0) / 60) % 24;
       const isDay = hours >= 6 && hours < 18;
-      const growthMultiplier = isDay ? 1.2 : 0.6;
-      if (state.heat > 30 && !state.policeActive && Math.random() < 0.0005 * (state.heat / 100) * growthMultiplier) {
-        state.policeActive = true;
-        triggerPoliceRaid();
+      const dayMult = isDay ? 1.25 : 0.7;
+
+      const tier = getHeatTier(state.heat);
+      const prevTier = state.lastPoliceTier || 0;
+
+      // Авто-события при росте уровня палева
+      if (tier >= 2 && tier > prevTier && !state.policeActive) {
+        state.lastPoliceTier = tier;
+        triggerPoliceEvent(tier);
+      } else if (tier < prevTier) {
+        state.lastPoliceTier = tier;
       }
-      document.getElementById('heat').textContent = Math.floor(state.heat);
+
+      // На критическом уровне — шанс рейда каждый тик
+      if (tier >= 4 && !state.policeActive && Math.random() < 0.004 * dayMult) {
+        triggerPoliceEvent(tier);
+      }
+      // 98%+ почти гарантированный арест если не в событии
+      if (tier >= 5 && !state.policeActive && Math.random() < 0.08) {
+        triggerPoliceEvent(5);
+      }
+
+      const heatEl = document.getElementById('heat');
+      if (heatEl) {
+        heatEl.textContent = Math.floor(state.heat);
+        heatEl.style.color = getHeatTierInfo(tier).color;
+      }
+      updatePoliceWarningUI();
+    }
+
+    function updatePoliceWarningUI() {
       const warningEl = document.getElementById('police-warning');
-      if (state.heat > 40) {
+      if (!warningEl) return;
+      const tier = getHeatTier(state.heat);
+      const info = getHeatTierInfo(tier);
+      if (tier >= 1 && !isInJail()) {
         warningEl.style.display = 'block';
+        warningEl.style.borderColor = info.color;
+        warningEl.textContent = info.text + ' (палево ' + Math.floor(state.heat) + '%)';
       } else {
         warningEl.style.display = 'none';
       }
     }
 
     function addHeat(amount) {
-      const hours = Math.floor(state.gameTime / 60) % 24;
+      if (isInJail()) return;
+      const hours = Math.floor((state.gameTime || 0) / 60) % 24;
       const isDay = hours >= 6 && hours < 18;
       const multiplier = isDay ? 1.3 : 0.7;
-      state.heat = Math.min(100, state.heat + amount * multiplier);
-      if (state.heat > 80) {
-        showToast('👮 ВНИМАНИЕ! Высокий уровень палева!', true);
-        haptic('error');
+      const before = getHeatTier(state.heat);
+      let heatGain = amount * multiplier;
+      if (typeof getPoliceFavorLevel === 'function') {
+        heatGain *= (1 - getPoliceFavorLevel().bonus * 0.5);
       }
+      state.heat = Math.min(100, (state.heat || 0) + heatGain);
+      const after = getHeatTier(state.heat);
+      if (after >= 2 && after > before) {
+        showToast(getHeatTierInfo(after).text, true);
+        haptic('error');
+      } else if (state.heat >= 80 && before < 4) {
+        showToast('👮 Палево критическое!', true);
+      }
+      save();
+    }
+
+    function calcPoliceFine(tier) {
+      const base = [0, 0, 80, 200, 450, 800][tier] || 200;
+      const wealth = Math.floor((state.money || 0) * 0.08);
+      const ignored = (state.policeWarningsIgnored || 0) * 50;
+      return Math.min(state.money, Math.floor(base + wealth + ignored));
+    }
+
+    function triggerPoliceEvent(tier) {
+      if (isInJail()) return;
+      if (state.policeActive) return;
+      tier = tier || getHeatTier(state.heat);
+      if (tier < 2) return;
+
+      state.policeActive = true;
+      const modal = document.getElementById('policeModal');
+      const message = document.getElementById('policeMessage');
+      const optionsDiv = document.getElementById('policeOptions');
+      if (!modal || !message || !optionsDiv) return;
+
+      optionsDiv.innerHTML = '';
+      const fine = calcPoliceFine(tier);
+      const hasItems = Object.keys(state.inventory || {}).some(k => state.inventory[k] > 0);
+      const favor = typeof getPoliceFavorLevel === 'function' ? getPoliceFavorLevel() : { bonus: 0 };
+      const bribeCost = Math.min(state.money, Math.floor((150 + tier * 120 + state.money * 0.05) * (1 - (favor.bonus || 0))));
+
+      if (tier === 2) {
+        message.innerHTML = '📞 <b>ПРЕДУПРЕЖДЕНИЕ УЧАСТКА</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Штраф за игнор: <b>' + fine + '$</b>';
+        addPoliceBtn(optionsDiv, 'btn-gold', '✅ Уплатить штраф (' + fine + '$)', () => handlePoliceChoice('pay_fine', { fine, tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🌀 Снизить палево (вентиляция −15)', () => handlePoliceChoice('vent_boost', { tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать', () => handlePoliceChoice('ignore', { fine, tier }));
+      } else if (tier === 3) {
+        message.innerHTML = '🚨 <b>ОБЫСК</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Выбери действие:';
+        if (state.money >= 100) {
+          addPoliceBtn(optionsDiv, 'btn-police', '💰 Взятка (' + bribeCost + '$)', () => handlePoliceChoice('bribe', { bribeCost, tier }));
+        }
+        if (hasItems) {
+          addPoliceBtn(optionsDiv, 'btn-warning', '📦 Отдать половину товара', () => handlePoliceChoice('half', { tier }));
+          addPoliceBtn(optionsDiv, 'btn-secondary', '📦 Отдать весь товар', () => handlePoliceChoice('all', { tier }));
+        }
+        addPoliceBtn(optionsDiv, 'btn-gold', '💵 Штраф (' + fine + '$)', () => handlePoliceChoice('pay_fine', { fine, tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🏃 Сбежать (50%)', () => handlePoliceChoice('resist', { tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать (штраф + палево)', () => handlePoliceChoice('ignore', { fine, tier }));
+      } else if (tier === 4) {
+        message.innerHTML = '🚔 <b>РЕЙД!</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Если проигнорируешь — арест!';
+        if (state.money >= 150) {
+          addPoliceBtn(optionsDiv, 'btn-police', '💰 Крупная взятка (' + bribeCost + '$)', () => handlePoliceChoice('bribe', { bribeCost, tier }));
+        }
+        if (hasItems) {
+          addPoliceBtn(optionsDiv, 'btn-warning', '📦 Отдать весь товар + 30% денег', () => handlePoliceChoice('raid_surrender', { tier }));
+        }
+        addPoliceBtn(optionsDiv, 'btn-gold', '💵 Большой штраф (' + Math.floor(fine * 1.5) + '$)', () => handlePoliceChoice('pay_fine', { fine: Math.floor(fine * 1.5), tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🏃 Сбежать (35%)', () => handlePoliceChoice('resist', { tier }));
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🙈 Игнорировать → АРЕСТ', () => handlePoliceChoice('ignore', { fine, tier: 5 }));
+      } else {
+        // tier 5 — арест
+        message.innerHTML = '🔒 <b>АРЕСТ</b><br>Палево: ' + Math.floor(state.heat) + '%<br>Срок: <b>3 игровых дня</b><br>Или огромная взятка:';
+        const jailBribe = Math.min(state.money, Math.floor(500 + state.money * 0.25 + 300));
+        if (state.money >= 300) {
+          addPoliceBtn(optionsDiv, 'btn-police', '💰 Откупиться (' + jailBribe + '$)', () => handlePoliceChoice('jail_bribe', { bribeCost: jailBribe, tier }));
+        }
+        addPoliceBtn(optionsDiv, 'btn-secondary', '🔒 Сесть на 3 игровых дня', () => handlePoliceChoice('jail', { tier }));
+      }
+
+      modal.classList.add('show');
+      haptic('warning');
+      if (tier >= 5) playSiren(4);
+      else if (tier >= 4) playSiren(2.5);
+      else if (tier >= 3) playWarningBeep();
+      else playWarningBeep();
+    }
+
+    function addPoliceBtn(container, cls, text, fn) {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + cls + ' btn-full';
+      btn.style.marginTop = '4px';
+      btn.textContent = text;
+      btn.onclick = fn;
+      container.appendChild(btn);
+    }
+
+    // Совместимость со старым вызовом
+    function triggerPoliceRaid() {
+      triggerPoliceEvent(getHeatTier(state.heat) || 4);
+    }
+
+    function sendToJail() {
+      playSiren(5);
+      state.jailUntil = (state.gameTime || 0) + JAIL_DAYS * GAME_DAY;
+      state.heat = Math.min(state.heat, 40);
+      state.policeActive = false;
+      // конфискация части товара
+      Object.keys(state.inventory || {}).forEach(key => {
+        const amt = state.inventory[key] || 0;
+        if (amt > 0) {
+          state.inventory[key] = Math.floor(amt * 0.2);
+          if (state.inventory[key] <= 0) delete state.inventory[key];
+        }
+      });
+      // штраф 20% денег
+      state.money = Math.floor((state.money || 0) * 0.8);
+      closePoliceModal();
+      showToast('🔒 Тюрьма на 3 игровых дня! Товар и 20% денег конфискованы.');
+      haptic('error');
       save();
       render();
     }
 
-    function triggerPoliceRaid() {
-      const hasItems = Object.keys(state.inventory).length > 0;
-      const hasMoney = state.money > 0;
-      if (!hasItems && !hasMoney) {
-        showToast('👮 Полиция пришла, но ничего не нашла!');
-        state.heat = Math.max(0, state.heat - 50);
-        state.policeActive = false;
-        save();
-        render();
-        return;
-      }
-      const modal = document.getElementById('policeModal');
-      const message = document.getElementById('policeMessage');
-      const optionsDiv = document.getElementById('policeOptions');
-
-      let msg = '👮 ПОЛИЦИЯ! ';
-      if (hasItems && hasMoney) msg += 'Выбери что делать:';
-      else if (hasItems) msg += 'У тебя есть товар. Выбери:';
-      else if (hasMoney) msg += 'У тебя есть деньги. Выбери:';
-      message.textContent = msg;
-      optionsDiv.innerHTML = '';
-
-      if (hasMoney && state.money >= 200) {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-police';
-        btn.textContent = '💰 Дать взятку (200$)';
-        btn.onclick = () => handlePoliceChoice('bribe');
-        optionsDiv.appendChild(btn);
-      }
-      if (hasItems) {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-warning';
-        btn.textContent = '📦 Отдать половину товара';
-        btn.onclick = () => handlePoliceChoice('half');
-        optionsDiv.appendChild(btn);
-        const btn2 = document.createElement('button');
-        btn2.className = 'btn btn-danger';
-        btn2.textContent = '📦 Отдать весь товар';
-        btn2.onclick = () => handlePoliceChoice('all');
-        optionsDiv.appendChild(btn2);
-      }
-      const btnResist = document.createElement('button');
-      btnResist.className = 'btn btn-secondary';
-      btnResist.textContent = '💪 Сопротивляться (риск)';
-      btnResist.onclick = () => handlePoliceChoice('resist');
-      optionsDiv.appendChild(btnResist);
-      modal.classList.add('show');
-      haptic('warning');
-    }
-
-    function handlePoliceChoice(choice) {
+    function handlePoliceChoice(choice, opts) {
+      opts = opts || {};
+      const tier = opts.tier || getHeatTier(state.heat);
       state.policeActive = false;
       let message = '';
+
       switch (choice) {
-        case 'bribe':
-          if (state.money >= 200) {
-            state.money -= 200;
-            state.heat = Math.max(0, state.heat - 60);
-            message = '💰 Взятка дана! Полиция ушла!';
-            haptic('success');
-          } else {
-            message = '❌ Не хватает денег!';
-            state.heat = Math.max(0, state.heat - 20);
-          }
+        case 'pay_fine': {
+          const fine = Math.min(state.money, opts.fine || calcPoliceFine(tier));
+          state.money = Math.max(0, state.money - fine);
+          state.heat = Math.max(0, state.heat - (15 + tier * 10));
+          state.policeWarningsIgnored = Math.max(0, (state.policeWarningsIgnored || 0) - 1);
+          message = '💵 Штраф ' + fine + '$ уплачен. Палево снижено.';
+          haptic('success');
           break;
-        case 'half':
-          const halfItems = Object.keys(state.inventory);
-          if (halfItems.length > 0) {
-            halfItems.forEach(key => {
-              if (state.inventory[key] > 0) {
-                const taken = Math.floor(state.inventory[key] / 2);
-                if (taken > 0) {
-                  state.inventory[key] -= taken;
-                  if (state.inventory[key] <= 0) delete state.inventory[key];
-                }
-              }
-            });
-            state.heat = Math.max(0, state.heat - 40);
-            message = '📦 Отдана половина товара!';
-            haptic('warning');
-          }
+        }
+        case 'vent_boost': {
+          state.heat = Math.max(0, state.heat - 15);
+          if (state.room && state.room.vent) state.heat = Math.max(0, state.heat - 10);
+          message = '🌀 Палево снижено. ' + (state.room && state.room.vent ? '(вентиляция помогла)' : 'Купи вентиляцию!');
+          haptic('success');
           break;
-        case 'all':
-          const allItems = Object.keys(state.inventory);
-          allItems.forEach(key => delete state.inventory[key]);
-          state.heat = Math.max(0, state.heat - 50);
-          message = '📦 Весь товар забран!';
+        }
+        case 'ignore': {
+          state.policeWarningsIgnored = (state.policeWarningsIgnored || 0) + 1;
+          const fine = Math.min(state.money, opts.fine || calcPoliceFine(tier));
+          state.money = Math.max(0, state.money - Math.floor(fine * 0.5));
+          state.heat = Math.min(100, state.heat + 8 + tier * 3);
+          message = '🙈 Игнор! Штраф ' + Math.floor(fine * 0.5) + '$, палево +' + (8 + tier * 3) + '%';
           haptic('error');
-          break;
-        case 'resist':
-          if (Math.random() < 0.5) {
-            state.heat = Math.max(0, state.heat - 70);
-            message = '💪 Ты сбежал! Палево снижено!';
+          closePoliceModal();
+          showToast(message, true);
+          save();
+          render();
+          // Если уже критично — сразу арест
+          if (state.heat >= 98 || tier >= 5) {
+            setTimeout(() => sendToJail(), 600);
+          } else if (state.heat >= 85) {
+            setTimeout(() => triggerPoliceEvent(5), 1200);
+          }
+          return;
+        }
+        case 'bribe': {
+          const cost = Math.min(state.money, opts.bribeCost || 200);
+          if (state.money >= cost && cost > 0) {
+            state.money -= cost;
+            state.heat = Math.max(0, state.heat - (40 + tier * 8));
+            state.policeWarningsIgnored = 0;
+            state.policeFavor = Math.min(150, (state.policeFavor || 0) + 5 + tier);
+            state.totalBribesPaid = (state.totalBribesPaid || 0) + cost;
+            message = '💰 Взятка ' + cost + '$. Полиция ушла. Связи +';
             haptic('success');
           } else {
-            Object.keys(state.inventory).forEach(key => delete state.inventory[key]);
-            state.money = 0;
-            state.heat = Math.max(0, state.heat - 30);
-            message = '💀 Сопротивление не помогло! Всё забрали!';
+            state.heat = Math.min(100, state.heat + 10);
+            message = '❌ Не хватает на взятку! Палево выросло.';
             haptic('error');
           }
           break;
+        }
+        case 'half': {
+          Object.keys(state.inventory || {}).forEach(key => {
+            if (state.inventory[key] > 0) {
+              state.inventory[key] -= Math.ceil(state.inventory[key] / 2);
+              if (state.inventory[key] <= 0) delete state.inventory[key];
+            }
+          });
+          state.heat = Math.max(0, state.heat - 35);
+          message = '📦 Отдана половина товара.';
+          haptic('warning');
+          break;
+        }
+        case 'all': {
+          Object.keys(state.inventory || {}).forEach(key => delete state.inventory[key]);
+          state.heat = Math.max(0, state.heat - 45);
+          message = '📦 Весь товар конфискован.';
+          haptic('error');
+          break;
+        }
+        case 'raid_surrender': {
+          Object.keys(state.inventory || {}).forEach(key => delete state.inventory[key]);
+          state.money = Math.floor((state.money || 0) * 0.7);
+          state.heat = Math.max(0, state.heat - 55);
+          state.policeWarningsIgnored = 0;
+          message = '🚔 Сдался: товар + 30% денег. Палево сильно снижено.';
+          haptic('warning');
+          break;
+        }
+        case 'resist': {
+          const chance = tier >= 4 ? 0.35 : 0.5;
+          if (Math.random() < chance) {
+            state.heat = Math.max(0, state.heat - 50);
+            message = '🏃 Удалось сбежать! Палево снижено.';
+            haptic('success');
+          } else {
+            Object.keys(state.inventory || {}).forEach(key => delete state.inventory[key]);
+            state.money = Math.floor((state.money || 0) * 0.5);
+            message = '💀 Не вышло! Товар и половина денег забраны.';
+            haptic('error');
+            if (state.heat >= 90) {
+              closePoliceModal();
+              showToast(message, true);
+              save();
+              setTimeout(() => sendToJail(), 500);
+              return;
+            }
+            state.heat = Math.max(0, state.heat - 15);
+          }
+          break;
+        }
+        case 'jail_bribe': {
+          const cost = Math.min(state.money, opts.bribeCost || 500);
+          if (state.money >= cost) {
+            state.money -= cost;
+            state.heat = Math.max(0, Math.min(30, state.heat - 70));
+            state.policeWarningsIgnored = 0;
+            message = '💰 Откупился за ' + cost + '$. На свободе.';
+            haptic('success');
+          } else {
+            closePoliceModal();
+            sendToJail();
+            return;
+          }
+          break;
+        }
+        case 'jail': {
+          closePoliceModal();
+          sendToJail();
+          return;
+        }
       }
+
       closePoliceModal();
       showToast(message);
       save();
@@ -3574,9 +4199,21 @@
     }
 
     function closePoliceModal() {
-      document.getElementById('policeModal').classList.remove('show');
-      state.policeActive = false;
+      const modal = document.getElementById('policeModal');
+      if (modal) modal.classList.remove('show');
+      // Не сбрасываем policeActive здесь при игноре — handlePoliceChoice сам управляет
+      if (!isInJail()) state.policeActive = false;
     }
+
+    function guardJailAction(actionName) {
+      if (isInJail()) {
+        const jr = getJailRemaining();
+        showToast('🔒 В тюрьме ещё ' + jr.text, true);
+        return true;
+      }
+      return false;
+    }
+
 
     // ============================================================
     // ====== РЕНДЕРИНГ ======
@@ -4616,6 +5253,7 @@
     }, 1500);
     updateRegisterBanner();
     checkAdminSession();
+    if (state.musicOn) setTimeout(() => { try { startReggae(); } catch(e) {} }, 800);
     // Secret: 5 taps on XP badge
     const xpBadge = document.getElementById('xp-badge');
     if (xpBadge) xpBadge.addEventListener('click', onAdminSecretTap);
@@ -4637,6 +5275,9 @@
     window.buyFert = buyFert;
     window.buyEnergy = buyEnergy;
     window.buyPot = buyPot;
+    window.openBribeModal = openBribeModal;
+    window.payProactiveBribe = payProactiveBribe;
+    window.toggleReggae = toggleReggae;
     window.selectSellBuyer = selectSellBuyer;
     window.buyRoomUpgrade = buyRoomUpgrade;
     window.sellAll = sellAll;
@@ -4875,9 +5516,10 @@
       showToast('🐶 Снуп вызван');
     }
     function adminTriggerPolice() {
-      state.heat = Math.max(state.heat, 50); state.policeActive = true;
-      if (typeof triggerPoliceRaid === 'function') triggerPoliceRaid();
-      save(); render(); showToast('👮 Рейд!');
+      state.heat = Math.max(state.heat || 0, 98);
+      state.policeActive = false;
+      triggerPoliceEvent(5);
+      save(); render(); showToast('👮 Арест (тест 98%)');
     }
     function adminResetGame() {
       if (!confirm('Полный сброс сохранения? Это нельзя отменить!')) return;
@@ -4942,6 +5584,9 @@
     window.adminToggleGod = adminToggleGod;
     window.adminForceSnoop = adminForceSnoop;
     window.adminTriggerPolice = adminTriggerPolice;
+    window.triggerPoliceEvent = triggerPoliceEvent;
+    window.sendToJail = sendToJail;
+    window.isInJail = isInJail;
     window.adminResetGame = adminResetGame;
     window.adminLoadPlayers = adminLoadPlayers;
     window.adminSyncMe = adminSyncMe;
