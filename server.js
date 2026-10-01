@@ -227,12 +227,13 @@ app.post('/api/register', (req, res) => {
     const thcBonus = Math.max(0, Math.floor(Number(body.thcBonus) || 0));
     const totalEarned = Math.max(0, Math.floor(Number(body.totalEarned) || 0));
 
-    // Реферер — только при первой регистрации и если существует
+    // Реферер — только при первой регистрации, нельзя сменить потом
     let referredBy = existing.referredBy || null;
     if (!referredBy && body.referredBy && body.referredBy !== userId) {
       const parentId = String(body.referredBy).slice(0, 64);
-      if (players[parentId]) {
-        // Защита от циклов: parent не должен быть в нашем будущем даунлайне (нас ещё нет)
+      // Принимаем даже если родитель ещё не в базе (зарегистрируется позже)
+      // Защита только от ссылки на самого себя
+      if (parentId && parentId !== userId && parentId.length >= 3) {
         referredBy = parentId;
       }
     }
