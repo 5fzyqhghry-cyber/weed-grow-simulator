@@ -87,8 +87,9 @@ function getDivision(rg) {
 
 /** Список прямых рефералов, отсортированный по дате регистрации */
 function getDirectReferrals(players, userId) {
+  const uid = String(userId);
   return Object.values(players)
-    .filter(p => p.referredBy === userId)
+    .filter(p => p.referredBy != null && String(p.referredBy) === uid)
     .sort((a, b) => (a.registeredAt || 0) - (b.registeredAt || 0));
 }
 
@@ -204,8 +205,8 @@ function countDownline(players, userId) {
 app.post('/api/register', (req, res) => {
   try {
     const body = req.body || {};
-    const userId = body.userId;
-    if (!userId || typeof userId !== 'string' || userId.length > 64) {
+    const userId = String(body.userId == null ? '' : body.userId).trim();
+    if (!userId || userId.length > 64 || userId === 'undefined' || userId === 'null') {
       return res.status(400).json({ success: false, error: 'userId required' });
     }
 
@@ -240,9 +241,9 @@ app.post('/api/register', (req, res) => {
         if (parent && parent.referredBy === userId) {
           // цикл — игнор
         } else {
-          referredBy = parentId;
+          referredBy = String(parentId);
           referralBound = true;
-          console.log(`REF BIND ${userId} <- ${parentId}`);
+          console.log(`REF BIND ${userId} <- ${referredBy} (parent in db: ${!!players[referredBy]})`);
         }
       }
     }
@@ -291,7 +292,10 @@ app.post('/api/register', (req, res) => {
       lastActive: now,
       commissionClaimed: existing.commissionClaimed || 0,
       commissionWeekId: existing.commissionWeekId || null,
-      totalCommissionEarned: existing.totalCommissionEarned || 0
+      totalCommissionEarned: existing.totalCommissionEarned || 0,
+      friends: Array.isArray(existing.friends) ? existing.friends : [],
+      friendRequests: Array.isArray(existing.friendRequests) ? existing.friendRequests : [],
+      friendOutgoing: Array.isArray(existing.friendOutgoing) ? existing.friendOutgoing : []
     };
 
     profile.rg = calcRGServer(profile);
@@ -493,6 +497,243 @@ app.post('/api/referral/claim', (req, res) => {
     return res.status(500).json({ success: false, error: 'server error' });
   }
 });
+
+
+// ========== ДРУЗЬЯ ==========
+const ONLINE_MS = 5 * 60 * 1000;
+
+function findPlayerByName(players, name) {
+  const n = String(name || '').trim().toLowerCase();
+  if (!n) return null;
+  // точное совпадение, потом частичное
+  let found = Object.values(players).find(p => String(p.name || '').toLowerCase() === n);
+  if (found) return found;
+  found = Object.values(players).find(p => String(p.name || '').toLowerCase().includes(n));
+  return found || null;
+}
+
+function ensureFriendArrays(p) {
+  if (!Array.isArray(p.friends)) p.friends = [];
+  if (!Array.isArray(p.friendRequests)) p.friendRequests = []; // входящие: { fromId, fromName, at }
+  if (!Array.isArray(p.friendOutgoing)) p.friendOutgoing = []; // исходящие toId
+}
+
+function isOnline(p) {
+  return !!(p && p.lastActive && (Date.now() - p.lastActive < ONLINE_MS));
+}
+
+/** Отправить заявку в друзья по имени или id */
+app.post('/api/friends/request', (req, res) => {
+  try {
+    const fromId = String(req.body?.fromId || '').trim();
+    const toNameOrId = String(req.body?.to || '').trim();
+    if (!fromId || !toNameOrId) {
+      return res.status(400).json({ success: false, error: 'fromId and to required' });
+    }
+    const players = loadPlayers();
+    const me = players[fromId];
+    if (!me) return res.status(404).json({ success: false, error: 'Сначала зарегистрируйся в рейтинге' });
+
+    ensureFriendArrays(me);
+    let target = players[toNameOrId] || findPlayerByName(players, toNameOrId);
+    if (!target) {
+      return res.status(404).json({ success: false, error: 'Игрок не найден. Он должен быть в рейтинге.' });
+    }
+    if (target.id === fromId) {
+      return res.status(400).json({ success: false, error: 'Нельзя добавить себя' });
+    }
+    ensureFriendArrays(target);
+
+    if (me.friends.includes(target.id)) {
+      return res.json({ success: false, error: 'Уже в друзьях' });
+    }
+    // уже есть входящая от него — сразу дружим
+    const incomingFromTarget = target.friendRequests.find(r => r.fromId === fromId);
+    // wait - if target already sent me a request, accept it
+    const myIncoming = me.friendRequests.find(r => r.fromId === target.id);
+    if (myIncoming) {
+      me.friends.push(target.id);
+      target.friends.push(fromId);
+      me.friendRequests = me.friendRequests.filter(r => r.fromId !== target.id);
+      target.friendOutgoing = (target.friendOutgoing || []).filter(id => id !== fromId);
+      players[fromId] = me;
+      players[target.id] = target;
+      savePlayers(players);
+      return res.json({ success: true, autoAccepted: true, friend: { id: target.id, name: target.name } });
+    }
+
+    if ((me.friendOutgoing || []).includes(target.id) ||
+        target.friendRequests.some(r => r.fromId === fromId)) {
+      return res.json({ success: false, error: 'Заявка уже отправлена' });
+    }
+
+    target.friendRequests.push({
+      fromId: fromId,
+      fromName: me.name || 'Игрок',
+      at: Date.now()
+    });
+    if (!me.friendOutgoing) me.friendOutgoing = [];
+    me.friendOutgoing.push(target.id);
+
+    players[fromId] = me;
+    players[target.id] = target;
+    savePlayers(players);
+
+    console.log(`FRIEND REQ ${fromId} -> ${target.id}`);
+    return res.json({
+      success: true,
+      message: 'Заявка отправлена',
+      to: { id: target.id, name: target.name }
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'server error' });
+  }
+});
+
+/** Принять / отклонить заявку */
+app.post('/api/friends/respond', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const fromId = String(req.body?.fromId || '').trim();
+    const accept = !!req.body?.accept;
+    if (!userId || !fromId) {
+      return res.status(400).json({ success: false, error: 'userId and fromId required' });
+    }
+    const players = loadPlayers();
+    const me = players[userId];
+    const other = players[fromId];
+    if (!me) return res.status(404).json({ success: false, error: 'player not found' });
+    ensureFriendArrays(me);
+    if (other) ensureFriendArrays(other);
+
+    const had = me.friendRequests.some(r => r.fromId === fromId);
+    me.friendRequests = me.friendRequests.filter(r => r.fromId !== fromId);
+    if (other) {
+      other.friendOutgoing = (other.friendOutgoing || []).filter(id => id !== userId);
+    }
+
+    if (accept && had && other) {
+      if (!me.friends.includes(fromId)) me.friends.push(fromId);
+      if (!other.friends.includes(userId)) other.friends.push(userId);
+    }
+
+    players[userId] = me;
+    if (other) players[fromId] = other;
+    savePlayers(players);
+
+    return res.json({
+      success: true,
+      accepted: accept && had,
+      friend: accept && other ? { id: other.id, name: other.name } : null
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'server error' });
+  }
+});
+
+/** Удалить из друзей */
+app.post('/api/friends/remove', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const friendId = String(req.body?.friendId || '').trim();
+    if (!userId || !friendId) {
+      return res.status(400).json({ success: false, error: 'userId and friendId required' });
+    }
+    const players = loadPlayers();
+    const me = players[userId];
+    const other = players[friendId];
+    if (me) {
+      ensureFriendArrays(me);
+      me.friends = me.friends.filter(id => id !== friendId);
+      players[userId] = me;
+    }
+    if (other) {
+      ensureFriendArrays(other);
+      other.friends = other.friends.filter(id => id !== userId);
+      players[friendId] = other;
+    }
+    savePlayers(players);
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: 'server error' });
+  }
+});
+
+/** Список друзей + входящие заявки + онлайн */
+app.get('/api/friends/:userId', (req, res) => {
+  try {
+    const userId = String(req.params.userId || '').slice(0, 64);
+    const players = loadPlayers();
+    const me = players[userId];
+    if (!me) {
+      return res.json({ success: true, friends: [], requests: [], outgoing: [] });
+    }
+    ensureFriendArrays(me);
+
+    const friends = me.friends.map(fid => {
+      const p = players[fid];
+      if (!p) return { id: fid, name: 'Игрок', level: 1, money: 0, online: false, lastActive: 0 };
+      return {
+        id: p.id,
+        name: p.name || 'Игрок',
+        level: p.level || 1,
+        money: p.money || 0,
+        online: isOnline(p),
+        lastActive: p.lastActive || 0
+      };
+    }).filter(Boolean);
+
+    const requests = (me.friendRequests || []).map(r => ({
+      fromId: r.fromId,
+      fromName: r.fromName || (players[r.fromId] && players[r.fromId].name) || 'Игрок',
+      at: r.at || 0,
+      online: players[r.fromId] ? isOnline(players[r.fromId]) : false
+    }));
+
+    const outgoing = (me.friendOutgoing || []).map(oid => {
+      const p = players[oid];
+      return {
+        id: oid,
+        name: p ? p.name : 'Игрок',
+        online: p ? isOnline(p) : false
+      };
+    });
+
+    // touch lastActive when checking friends (online heartbeat)
+    me.lastActive = Date.now();
+    players[userId] = me;
+    savePlayers(players);
+
+    res.json({ success: true, friends, requests, outgoing });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: 'server error' });
+  }
+});
+
+/** Поиск игроков по имени */
+app.get('/api/players/search', (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim().toLowerCase();
+    if (!q || q.length < 1) return res.json({ players: [] });
+    const players = loadPlayers();
+    const list = Object.values(players)
+      .filter(p => String(p.name || '').toLowerCase().includes(q))
+      .slice(0, 20)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        level: p.level || 1,
+        online: isOnline(p)
+      }));
+    res.json({ players: list });
+  } catch (e) {
+    res.json({ players: [] });
+  }
+});
+
 
 // Статика: отдаём игру (index.html) с того же домена
 app.use(express.static(__dirname, {
