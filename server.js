@@ -16,6 +16,7 @@ const PM_FILE = path.join(DATA_DIR, 'pms.json');
 const REF_RATES = [0.35, 0.25, 0.15, 0.10, 0.05];
 const REF_L1_FULL_SLOTS = 10; // первые 10 на полной ставке 35%
 const REF_L1_EXTRA_RATE = 0.15;
+const REF_SIGNUP_BONUS = 200; // бонус пригласившему за каждого нового реферала
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -236,16 +237,43 @@ app.post('/api/register', (req, res) => {
     if (!referredBy && body.referredBy) {
       let parentId = String(body.referredBy).slice(0, 64).trim();
       if (parentId.startsWith('ref_')) parentId = parentId.slice(4);
-      // нельзя быть своим рефералом
-      if (parentId && parentId !== userId && parentId.length >= 2 && parentId !== 'null') {
-        // защита от циклов: parent не должен иметь referredBy = userId (простая проверка)
+      else if (parentId.startsWith('ref') && /^ref[\d]/.test(parentId)) parentId = parentId.slice(3);
+      parentId = parentId.replace(/[^a-zA-Z0-9_\-]/g, '');
+      if (parentId && parentId !== userId && parentId.length >= 2 && parentId !== 'null' && parentId !== 'undefined') {
         const parent = players[parentId];
-        if (parent && parent.referredBy === userId) {
-          // цикл — игнор
+        // цикл: parent уже чей-то реферал этого userId
+        if (parent && String(parent.referredBy) === String(userId)) {
+          console.log('REF cycle ignored', userId, parentId);
         } else {
           referredBy = String(parentId);
           referralBound = true;
           console.log(`REF BIND ${userId} <- ${referredBy} (parent in db: ${!!players[referredBy]})`);
+
+          // Создать «заглушку» родителя если ещё не регистрировался — чтобы сеть считалась
+          if (!players[referredBy]) {
+            players[referredBy] = {
+              id: referredBy,
+              name: 'Игрок',
+              money: 0, netWorth: 0, level: 1, energy: 0,
+              harvests: 0, hybrids: 0, achievements: 0, investments: 0,
+              heat: 0, thcBonus: 0, totalEarned: 0, lastTotalEarned: 0,
+              weeklyEarned: 0, weekId: weekId, referredBy: null,
+              registeredAt: now, lastActive: now,
+              commissionClaimed: 0, commissionWeekId: null,
+              totalCommissionEarned: 0, signupBonusPending: 0,
+              friends: [], friendRequests: [], friendOutgoing: [],
+              rg: 0, division: 'bronze', season: season, seasonRg: 0
+            };
+          }
+
+          // Бонус пригласившему за регистрацию реферала
+          const par = players[referredBy];
+          par.signupBonusPending = Math.floor(par.signupBonusPending || 0) + REF_SIGNUP_BONUS;
+          par.totalCommissionEarned = Math.floor(par.totalCommissionEarned || 0); // не увеличиваем до claim
+          // авто-друзья
+          if (!Array.isArray(par.friends)) par.friends = [];
+          if (!par.friends.includes(userId)) par.friends.push(userId);
+          players[referredBy] = par;
         }
       }
     }
@@ -297,8 +325,13 @@ app.post('/api/register', (req, res) => {
       totalCommissionEarned: existing.totalCommissionEarned || 0,
       friends: Array.isArray(existing.friends) ? existing.friends : [],
       friendRequests: Array.isArray(existing.friendRequests) ? existing.friendRequests : [],
-      friendOutgoing: Array.isArray(existing.friendOutgoing) ? existing.friendOutgoing : []
+      friendOutgoing: Array.isArray(existing.friendOutgoing) ? existing.friendOutgoing : [],
+      signupBonusPending: existing.signupBonusPending || 0
     };
+    // Если только что привязались — добавить родителя в друзья
+    if (referralBound && referredBy) {
+      if (!profile.friends.includes(referredBy)) profile.friends.push(referredBy);
+    }
 
     profile.rg = calcRGServer(profile);
     profile.division = getDivision(profile.rg).id;
@@ -449,7 +482,8 @@ app.get('/api/referral/:userId', (req, res) => {
     res.json({
       success: true,
       downline,
-      pending: commission.pending,
+      pending: Math.floor(commission.pending || 0) + Math.floor(players[userId].signupBonusPending || 0),
+      signupBonusPending: Math.floor(players[userId].signupBonusPending || 0),
       claimed: commission.claimed,
       totalEarned: players[userId].totalCommissionEarned || 0,
       breakdown: commission.breakdown,
@@ -474,20 +508,23 @@ app.post('/api/referral/claim', (req, res) => {
     if (!me) return res.status(404).json({ success: false, error: 'player not found' });
 
     const commission = calcPendingCommission(players, userId);
-    if (commission.pending <= 0) {
-      return res.json({ success: true, claimed: 0, message: 'Нечего забирать' });
+    const signupBonus = Math.floor(me.signupBonusPending || 0);
+    const amount = Math.floor(commission.pending || 0) + signupBonus;
+    if (amount <= 0) {
+      return res.json({ success: true, claimed: 0, message: 'Нечего забирать. Бонус за рефералов появится после их регистрации, комиссия — с их заработка за неделю.' });
     }
 
-    const amount = commission.pending;
-    me.commissionClaimed = (me.commissionClaimed || 0) + amount;
-    me.commissionWeekId = commission.weekId;
+    if (commission.pending > 0) {
+      me.commissionClaimed = (me.commissionClaimed || 0) + commission.pending;
+      me.commissionWeekId = commission.weekId;
+    }
+    me.signupBonusPending = 0;
     me.totalCommissionEarned = (me.totalCommissionEarned || 0) + amount;
-    // Деньги начисляем на серверный баланс (клиент тоже добавит у себя)
     me.money = Math.floor((me.money || 0) + amount);
     players[userId] = me;
     savePlayers(players);
 
-    console.log(`Claim ${userId} +${amount}$ commission`);
+    console.log(`Claim ${userId} +${amount}$ (comm ${commission.pending} + signup ${signupBonus})`);
     return res.json({
       success: true,
       claimed: amount,
