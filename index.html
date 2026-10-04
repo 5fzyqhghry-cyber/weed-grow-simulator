@@ -2033,7 +2033,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.4-pests · 04.10';
+    const APP_VERSION = 'v5.5-ref · 04.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -2063,8 +2063,20 @@
       if (tg?.initDataUnsafe?.user?.id) {
         const tgId = String(tg.initDataUnsafe.user.id);
         if (userId !== tgId) {
+          const wasGuest = String(userId).startsWith('guest_');
           userId = tgId;
           localStorage.setItem('grow_sim_uid', userId);
+          // после смены ID с guest → telegram нужно заново привязать рефа
+          if (wasGuest) {
+            try {
+              const pref = localStorage.getItem('grow_pending_ref');
+              if (pref) { /* keep pending */ }
+            } catch (e2) {}
+            setTimeout(function() {
+              try { handleReferral(); } catch (e3) {}
+              try { ensureRegisteredOnServer(true); } catch (e4) {}
+            }, 600);
+          }
         }
       }
     } catch (e) {}
@@ -6520,13 +6532,13 @@
           state.money += data.claimed;
           state.referralEarned = data.totalEarned || (state.referralEarned || 0) + data.claimed;
           state.refPending = 0;
-          showToast('🎁 Комиссия: +' + data.claimed + '$');
+          showToast('🎁 Реф. бонус: +' + data.claimed + '$');
           haptic('success');
           save();
           render();
           loadReferralStats();
         } else {
-          showToast(data.message || 'Нечего забирать', true);
+          showToast(data.message || 'Нечего забирать. Нужны зарегистрированные рефералы.', true);
         }
       } catch (e) {
         showToast('❌ Сервер недоступен', true);
@@ -6696,17 +6708,31 @@
     /** Регистрация/синк на сервере (рефералы + рейтинг) */
     async function ensureRegisteredOnServer(force) {
       try {
-        // Подтянуть ref из pending если state пустой
+        // Всегда подтягиваем ref из pending / start_param
+        try {
+          const p = localStorage.getItem('grow_pending_ref') || sessionStorage.getItem('grow_pending_ref');
+          if (p && p !== userId && !state.referredBy) state.referredBy = p;
+        } catch (e) {}
         if (!state.referredBy) {
-          try {
-            const p = localStorage.getItem('grow_pending_ref') || sessionStorage.getItem('grow_pending_ref');
-            if (p && p !== userId) state.referredBy = p;
-          } catch (e) {}
+          const extracted = extractRefId();
+          if (extracted && extracted !== userId) {
+            state.referredBy = extracted;
+            try {
+              localStorage.setItem('grow_pending_ref', extracted);
+              sessionStorage.setItem('grow_pending_ref', extracted);
+            } catch (e) {}
+          }
         }
 
         const payload = getRatingPayload();
-        // Гарантируем referredBy в payload
         if (!payload.referredBy && state.referredBy) payload.referredBy = state.referredBy;
+        // Чистим формат
+        if (payload.referredBy) {
+          let r = String(payload.referredBy);
+          if (r.startsWith('ref_')) r = r.slice(4);
+          payload.referredBy = r;
+          if (r === userId) payload.referredBy = null;
+        }
 
         const response = await fetch(`${SERVER_URL}/api/register`, {
           method: 'POST',
@@ -6727,7 +6753,10 @@
           updateRegisterBanner();
           if (typeof closeRegisterModal === 'function') closeRegisterModal();
           if (data.referralBound) {
-            showToast('✅ Ты в сети пригласившего!');
+            showToast('✅ Ты в сети пригласившего! Ему +200$ (заберёт в рефералах)');
+          }
+          if (data.parentExists === false && data.referredBy) {
+            console.log('Parent not registered yet, but bind saved:', data.referredBy);
           }
           loadReferralStats();
           return data;
