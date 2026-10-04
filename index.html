@@ -2027,7 +2027,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.1-chat · 04.10';
+    const APP_VERSION = 'v5.3-fix · 04.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -2101,12 +2101,19 @@
     ];
 
     const POT_LEVELS = [
-      { id: 1, emoji: '🪴', name: 'Базовый горшок', price: 0, desc: 'Стандартный горшок' },
-      { id: 2, emoji: '🪣', name: 'Железный горшок', price: 1000, desc: 'Прочный железный горшок' },
-      { id: 3, emoji: '🏺', name: 'Глиняный горшок', price: 2500, desc: 'Дышит, корням комфортно' },
-      { id: 4, emoji: '🎒', name: 'Мешок-горшок', price: 5000, desc: 'Специальный тканевый мешок' },
-      { id: 5, emoji: '💎', name: 'Космический горшок', price: 10000, desc: 'Инопланетная технология' }
+      { id: 1, emoji: '🪴', name: 'Базовый горшок', price: 0, desc: 'Стандарт · без бонусов',
+        yieldMult: 1.0, speedMult: 1.0, waterMult: 1.0, diseaseMult: 1.0, healthBonus: 0 },
+      { id: 2, emoji: '🪣', name: 'Железный горшок', price: 1000, desc: '−10% болезни · +5% здоровье · +5% урожай',
+        yieldMult: 1.05, speedMult: 1.0, waterMult: 0.95, diseaseMult: 0.9, healthBonus: 5 },
+      { id: 3, emoji: '🏺', name: 'Глиняный горшок', price: 2500, desc: '−25% расход воды · −30% болезни',
+        yieldMult: 1.08, speedMult: 1.05, waterMult: 0.75, diseaseMult: 0.7, healthBonus: 8 },
+      { id: 4, emoji: '🎒', name: 'Мешок-горшок', price: 5000, desc: '+15% урожай · +8% скорость',
+        yieldMult: 1.15, speedMult: 1.08, waterMult: 0.85, diseaseMult: 0.75, healthBonus: 10 },
+      { id: 5, emoji: '💎', name: 'Космический горшок', price: 10000, desc: '+25% урожай · +15% скорость · −50% болезни',
+        yieldMult: 1.25, speedMult: 1.15, waterMult: 0.7, diseaseMult: 0.5, healthBonus: 15 }
     ];
+    const VENT_FILTER_MS = 20 * 60 * 1000;
+    const VENT_FILTER_PRICE = 80;
 
     const LAMPS = [
       { id: 'lamp1', emoji: '💡', name: 'CFL', price: 150, power: 1.15, desc: '+15% скорость' },
@@ -2124,7 +2131,7 @@
     ];
 
     const ROOM_UPGRADES = [
-      { id: 'vent', emoji: '🌀', name: 'Вентиляция', price: 500, type: 'vent', desc: 'Уменьшает палево на 1 ед/мин' },
+      { id: 'vent', emoji: '🌀', name: 'Вентиляция', price: 500, type: 'vent', desc: 'Система −палево. Фильтр 20 мин, замена 80$' },
       { id: 'auto', emoji: '💦', name: 'Автополив', price: 1200, type: 'auto', desc: 'Автоматический полив' },
       { id: 'heater', emoji: '🔥', name: 'Обогреватель', price: 800, type: 'heater', desc: 'Скорость роста +15%' }
     ];
@@ -2425,6 +2432,126 @@
     function getFert(id) { return FERTS.find(f => f.id === id); }
 
     function getPotLevel(id) { return POT_LEVELS.find(p => p.id === id); }
+
+    function findPot(id) {
+      const sid = String(id);
+      return (state.pots || []).find(p => String(p.id) === sid) || null;
+    }
+    function isPotPlantable(pot) {
+      if (!pot) return false;
+      if (pot.isActive === false) return false;
+      if (pot.strain && !pot.plantedAt) return true;
+      if (pot.strain && typeof getStrain === 'function' && !getStrain(pot.strain)) return true;
+      return !pot.strain;
+    }
+    function clearPotPlant(pot) {
+      if (!pot) return;
+      pot.strain = null;
+      pot.plantedAt = null;
+      pot.stage = 0;
+      pot.disease = false;
+      pot.pests = false;
+      pot.pestLevel = 0;
+      pot.water = 80;
+      pot.health = 100;
+      pot.lamp = null;
+      pot.fert = null;
+      pot.speedMult = 1;
+      pot.yieldMult = 1;
+      pot.thc = 0;
+      pot.lastTick = Date.now();
+    }
+    function getPotStats(pot) {
+      const lvl = (pot && pot.potLevel) || 1;
+      return POT_LEVELS.find(p => p.id === lvl) || POT_LEVELS[0];
+    }
+    function isVentRunning() {
+      if (!state.room) return false;
+      if (state.room.vent && !state.room.ventOwned) {
+        state.room.ventOwned = true;
+        if (!state.room.ventUntil) state.room.ventUntil = Date.now() + VENT_FILTER_MS;
+        if (state.room.ventOn === undefined) state.room.ventOn = true;
+      }
+      if (!state.room.ventOwned && !state.room.vent) return false;
+      if (!state.room.ventOn) return false;
+      if (Date.now() >= (state.room.ventUntil || 0)) {
+        state.room.ventOn = false;
+        return false;
+      }
+      return true;
+    }
+    function getVentLeftSec() {
+      if (!state.room || !state.room.ventOn) return 0;
+      return Math.max(0, Math.floor(((state.room.ventUntil || 0) - Date.now()) / 1000));
+    }
+    function toggleVent() {
+      if (!state.room) state.room = {};
+      if (!state.room.ventOwned && !state.room.vent) {
+        showToast('Сначала купи вентиляцию', true);
+        return;
+      }
+      state.room.ventOwned = true;
+      if (state.room.ventOn && getVentLeftSec() > 0) {
+        state.room.ventOn = false;
+        showToast('🌀 Вентиляция выкл');
+      } else {
+        if ((state.room.ventUntil || 0) <= Date.now()) {
+          showToast('Фильтр кончился — замени за ' + VENT_FILTER_PRICE + '$', true);
+          return;
+        }
+        state.room.ventOn = true;
+        showToast('🌀 Вентиляция вкл · ' + Math.ceil(getVentLeftSec() / 60) + ' мин');
+      }
+      save(); render();
+    }
+    function replaceVentFilter() {
+      if (!state.room) state.room = {};
+      if (!state.room.ventOwned && !state.room.vent) {
+        showToast('Сначала купи вентиляцию', true);
+        return;
+      }
+      if (Math.floor(state.money) < VENT_FILTER_PRICE) {
+        showToast('Мало денег (' + VENT_FILTER_PRICE + '$)', true);
+        return;
+      }
+      state.money = Math.floor(state.money) - VENT_FILTER_PRICE;
+      state.room.ventOwned = true;
+      if (state.room.ventOn && (state.room.ventUntil || 0) > Date.now()) {
+        state.room.ventUntil = state.room.ventUntil + VENT_FILTER_MS;
+      } else {
+        state.room.ventUntil = Date.now() + VENT_FILTER_MS;
+      }
+      state.room.ventOn = true;
+      showToast('🔧 Фильтр +20 мин (−' + VENT_FILTER_PRICE + '$)');
+      haptic('success');
+      save(); render();
+    }
+    function upgradePot(potId) {
+      const pot = findPot(potId);
+      if (!pot) return;
+      const cur = pot.potLevel || 1;
+      if (cur >= 5) { showToast('Макс. уровень горшка', true); return; }
+      const next = POT_LEVELS.find(p => p.id === cur + 1);
+      if (!next) return;
+      if ((state.level || 1) < next.id * 2) {
+        showToast('Нужен уровень игрока ' + (next.id * 2), true);
+        return;
+      }
+      const prev = POT_LEVELS.find(p => p.id === cur) || { price: 0 };
+      const price = Math.max(0, (next.price || 0) - (prev.price || 0));
+      if (Math.floor(state.money) < price) {
+        showToast('Мало денег (нужно ' + price + '$)', true);
+        return;
+      }
+      state.money = Math.floor(state.money) - price;
+      pot.potLevel = next.id;
+      showToast(next.emoji + ' → ' + next.name + ' (−' + price + '$)');
+      haptic('success');
+      addXp(8);
+      save(); render();
+    }
+
+
 
     function xpFor(l) { return l * 120; }
 
@@ -3337,10 +3464,11 @@
           return;
         }
 
-        let waterDrain = 0.3 * weather.waterMult;
-        if (pot.stage >= 4) waterDrain = 0.6 * weather.waterMult;
-        else if (pot.stage >= 3) waterDrain = 0.5 * weather.waterMult;
-        else if (pot.stage >= 2) waterDrain = 0.35 * weather.waterMult;
+        const potStats = getPotStats(pot);
+        let waterDrain = 0.3 * weather.waterMult * (potStats.waterMult || 1);
+        if (pot.stage >= 4) waterDrain = 0.6 * weather.waterMult * (potStats.waterMult || 1);
+        else if (pot.stage >= 3) waterDrain = 0.5 * weather.waterMult * (potStats.waterMult || 1);
+        else if (pot.stage >= 2) waterDrain = 0.35 * weather.waterMult * (potStats.waterMult || 1);
 
         if (state.room.auto && state.waterReservoir > 0) {
           const autoAmount = 0.2 * dt;
@@ -3378,9 +3506,9 @@
 
         // Цветение пахнет — палево растёт
         if (pot.stage >= 4 && pot.stage < 5) {
-          addHeat(0.015 * dt * (state.room && state.room.vent ? 0.4 : 1));
+          addHeat(0.015 * dt * (isVentRunning() ? 0.4 : 1));
         } else if (pot.stage >= 5) {
-          addHeat(0.025 * dt * (state.room && state.room.vent ? 0.35 : 1));
+          addHeat(0.025 * dt * (isVentRunning() ? 0.35 : 1));
         }
 
         if (pot.lamp && pot.stage > 0 && pot.stage < 5) {
@@ -3390,9 +3518,10 @@
 
         let healthRegen = 0.15;
         let diseaseChance = 0.004;
-        if (state.room.vent) { diseaseChance *= 0.3;
-          healthRegen *= 1.4; }
-        if (state.room.heater) healthRegen *= 1.15;
+        if (isVentRunning()) { diseaseChance *= 0.3; healthRegen *= 1.4; }
+        diseaseChance *= (potStats.diseaseMult || 1);
+        healthRegen *= (1 + (potStats.healthBonus || 0) / 100);
+        if (state.room && state.room.heater) healthRegen *= 1.15;
 
         if (pot.water > 25) {
           pot.health = Math.min(100, pot.health + healthRegen * dt);
@@ -3536,7 +3665,9 @@
         mult *= 0.85;
       }
       if (state.room && state.room.heater) mult *= 1.12;
-      if (state.room && state.room.vent) mult *= 1.06;
+      if (isVentRunning()) mult *= 1.06;
+      const ps = getPotStats(pot);
+      if (ps && ps.speedMult) mult *= ps.speedMult;
       if (mult < 0.08) mult = 0.08;
       return s.baseTime / mult;
     }
@@ -3595,7 +3726,7 @@
 
     function harvest(id) {
       if (typeof guardJailAction === "function" && guardJailAction()) return;
-      const pot = state.pots.find(p => p.id === id);
+      const pot = findPot(id) || state.pots.find(p => p.id === id);
       if (!pot) { showToast('Горшок не найден', true); return; }
       if (!pot.isActive) { showToast('Этот горшок неактивен', true); return; }
       if (!pot.strain) { showToast('Нет растения', true); return; }
@@ -3615,7 +3746,7 @@
       const q = getQuality(pot);
       const qName = qualityName(q);
       const thcBonus = Math.floor((pot.thc || 0) / 20);
-      let amount = Math.floor(s.yield * (pot.yieldMult || 1) * (pot.health / 100) * (q >= 1.5 ? 1.2 : 1) + thcBonus);
+      let amount = Math.floor(s.yield * (pot.yieldMult || 1) * (getPotStats(pot).yieldMult || 1) * (pot.health / 100) * (q >= 1.5 ? 1.2 : 1) + thcBonus);
       if (amount < 1) amount = 1;
 
       state.totalHarvests = (state.totalHarvests || 0) + 1;
@@ -3651,7 +3782,7 @@
     // ============================================================
     function waterPot(id) {
       if (typeof guardJailAction === "function" && guardJailAction()) return;
-      const pot = state.pots.find(p => p.id === id);
+      const pot = findPot(id) || state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
       if (!godMode && Math.floor(state.energy) < 2) { showToast('Нужно 2⚡', true); return; }
@@ -3705,11 +3836,13 @@
     function treatPestsAction(id) { treatPests(id); }
 
     function openSeedModal(id) {
-      const pot = state.pots.find(p => p.id === id);
+      if (typeof guardJailAction === 'function' && guardJailAction()) return;
+      let pot = findPot(id);
       if (!pot) { showToast('Горшок не найден', true); return; }
-      if (!pot.isActive) { showToast('Этот горшок неактивен', true); return; }
-      if (pot.strain) { showToast('Здесь уже есть растение', true); return; }
-      selectedPotId = id;
+      if (pot.isActive === false) pot.isActive = true;
+      if (!isPotPlantable(pot)) { showToast('Здесь уже есть растение', true); return; }
+      if (pot.strain && !pot.plantedAt) clearPotPlant(pot);
+      selectedPotId = pot.id;
       const list = document.getElementById('seed-list');
       list.innerHTML = '';
 
@@ -3955,14 +4088,26 @@
       if (!state.room) state.room = { vent: false, auto: false, heater: false };
       const price = Math.floor(u.price || 0);
       if (Math.floor(state.money) < price) { showToast('Мало денег (нужно ' + price + '$)', true); return; }
-      if (u.type === 'vent' && state.room.vent) { showToast('Уже куплено'); return; }
+      if (u.type === 'vent' && (state.room.ventOwned || state.room.vent)) {
+        showToast('Система уже есть — меняй фильтр', true);
+        return;
+      }
       if (u.type === 'auto' && state.room.auto) { showToast('Уже куплено'); return; }
       if (u.type === 'heater' && state.room.heater) { showToast('Уже куплено'); return; }
       state.money = Math.floor(state.money) - price;
-      if (u.type === 'vent') state.room.vent = true;
-      if (u.type === 'auto') state.room.auto = true;
-      if (u.type === 'heater') state.room.heater = true;
-      showToast('🏠 Куплено: ' + u.emoji + ' ' + u.name);
+      if (u.type === 'vent') {
+        state.room.ventOwned = true;
+        state.room.vent = true;
+        state.room.ventOn = true;
+        state.room.ventUntil = Date.now() + VENT_FILTER_MS;
+        showToast('🌀 Вентиляция + фильтр 20 мин');
+      } else if (u.type === 'auto') {
+        state.room.auto = true;
+        showToast('🏠 Куплено: ' + u.emoji + ' ' + u.name);
+      } else if (u.type === 'heater') {
+        state.room.heater = true;
+        showToast('🏠 Куплено: ' + u.emoji + ' ' + u.name);
+      }
       haptic('success');
       addXp(10);
       save();
@@ -4916,7 +5061,7 @@
 
       // Снижение палева
       let reduction = 0.15; // естественный спад
-      if (state.room && state.room.vent) reduction += 1.0;
+      if (isVentRunning()) reduction += 1.0;
       if (state.heat > 0) {
         state.heat = Math.max(0, state.heat - (dt / 60) * reduction);
       }
@@ -5149,7 +5294,7 @@
           break;
         }
         case 'vent_boost': {
-          if (!(state.room && state.room.vent)) {
+          if (!isVentRunning()) {
             message = '❌ Вентиляция не куплена! Купи в «Комната».';
             haptic('error');
             break;
@@ -5329,11 +5474,15 @@
         if (!pot.strain || !pot.plantedAt) {
           if (pot.strain && !pot.plantedAt) clearPotPlant(pot);
           pot.isActive = true;
+          const ps = getPotStats(pot);
+          const canUp = (pot.potLevel || 1) < 5;
           div.innerHTML = `
-                <div class="pot-emoji">🪴</div>
-                <div class="pot-name">Пустой горшок</div>
-                <div class="pot-status">Готов к посадке</div>
+                <div class="pot-emoji">${ps.emoji || '🪴'}</div>
+                <div class="pot-name">${ps.name || 'Горшок'}</div>
+                <div class="pot-status">Пустой · ур.${pot.potLevel || 1}</div>
+                <div style="font-size:9px;color:var(--hint);margin-bottom:4px;">${ps.desc || ''}</div>
                 <button class="btn btn-full" onclick="openSeedModal(${pot.id})">🌱 Посадить</button>
+                ${canUp ? `<button class="btn btn-small btn-secondary btn-full" style="margin-top:4px;" onclick="upgradePot(${pot.id})">⬆️ Улучшить</button>` : ''}
             `;
         } else {
           const s = getStrain(pot.strain);
@@ -5354,6 +5503,7 @@
           let actions = '';
           if (ready && pot.isActive) {
             actions = `<button class="btn btn-full" onclick="harvest(${pot.id})">🌿 Собрать</button>`;
+            if ((pot.potLevel || 1) < 5) actions += `<button class="btn btn-small btn-secondary btn-full" style="margin-top:4px;" onclick="upgradePot(${pot.id})">⬆️ Горшок</button>`;
           } else if (pot.isActive) {
             let pestBtn = '';
             if (pot.pests) {
@@ -5620,13 +5770,27 @@
     function renderRoom() {
       const info = document.getElementById('room-info');
       if (!info) return;
+      const ventRun = isVentRunning();
+      const ventLeft = getVentLeftSec();
+      const ventOwned = !!(state.room && (state.room.ventOwned || state.room.vent));
+      let ventLabel = 'Нет';
+      if (ventOwned) {
+        if (ventRun) ventLabel = 'Вкл · ' + Math.ceil(ventLeft / 60) + 'м';
+        else if (ventLeft <= 0 && (state.room.ventUntil || 0) <= Date.now()) ventLabel = 'Фильтр 0';
+        else ventLabel = 'Выкл';
+      }
       info.innerHTML = `
           <div class="room-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
               <div class="room-item" style="background:rgba(255,255,255,0.03);padding:6px;border-radius:8px;text-align:center;font-size:10px"><span class="big" style="font-size:20px;display:block">🪴</span><div>${state.pots.length}</div><div class="label" style="color:var(--hint);font-size:8px">Горшков</div></div>
-              <div class="room-item"><span class="big">${state.room.vent ? '✅' : '❌'}</span><div>${state.room.vent ? 'Вкл' : 'Выкл'}</div><div class="label">Вентиляция</div></div>
+              <div class="room-item"><span class="big">${ventRun ? '✅' : (ventOwned ? '⏸' : '❌')}</span><div>${ventLabel}</div><div class="label">Вентиляция</div></div>
               <div class="room-item"><span class="big">${state.room.auto ? '✅' : '❌'}</span><div>${state.room.auto ? 'Вкл' : 'Выкл'}</div><div class="label">Автополив</div></div>
               <div class="room-item" style="grid-column:span 3;"><span class="big">${state.room.heater ? '✅' : '❌'}</span><div>${state.room.heater ? 'Вкл' : 'Выкл'}</div><div class="label">Обогреватель</div></div>
           </div>
+          ${ventOwned ? `<div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-small ${ventRun ? 'btn-secondary' : ''}" style="flex:1;" onclick="toggleVent()">${ventRun ? '⏸ Выкл вент.' : '▶️ Вкл вент.'}</button>
+            <button class="btn btn-small btn-warning" style="flex:1;" onclick="replaceVentFilter()">🔧 Фильтр ${VENT_FILTER_PRICE}$</button>
+          </div>
+          <div style="font-size:10px;color:var(--hint);margin-top:4px;text-align:center;">Фильтр работает 20 мин. Без него вентиляция не снижает палево.</div>` : ''}
       `;
       const list = document.getElementById('room-list');
       if (!list) return;
@@ -5650,7 +5814,7 @@
       list.innerHTML += '<div class="section-title">🏠 Улучшения</div>';
       ROOM_UPGRADES.forEach(u => {
         let bought = false;
-        if (u.type === 'vent' && state.room.vent) bought = true;
+        if (u.type === 'vent' && (state.room.ventOwned || state.room.vent)) bought = true;
         if (u.type === 'auto' && state.room.auto) bought = true;
         if (u.type === 'heater' && state.room.heater) bought = true;
         const c = document.createElement('div');
@@ -6625,7 +6789,8 @@
 
     setInterval(() => {
       if (state.energy < state.maxEnergy) {
-        state.energy = Math.min(state.maxEnergy, state.energy + 0.3);
+        const boost = (state.energy < state.maxEnergy * 0.2) ? 0.55 : 0.35;
+        state.energy = Math.min(state.maxEnergy, state.energy + boost);
       }
       tickPots();
       tickDryQueue();
@@ -6730,6 +6895,10 @@
     window.buyFert = buyFert;
     window.buyEnergy = buyEnergy;
     window.buyPot = buyPot;
+    window.findPot = findPot;
+    window.upgradePot = upgradePot;
+    window.toggleVent = toggleVent;
+    window.replaceVentFilter = replaceVentFilter;
     window.openBribeModal = openBribeModal;
     window.payProactiveBribe = payProactiveBribe;
     window.toggleReggae = toggleReggae;
