@@ -8,6 +8,8 @@ const PORT = process.env.PORT || 80;
 
 const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data'));
 const DB_FILE = path.join(DATA_DIR, 'players.json');
+const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
+const PM_FILE = path.join(DATA_DIR, 'pms.json');
 
 // 5 ступеней пирамиды: % от недельного заработка даунлайна
 // L1: первые 10 прямых — 35%, остальные прямые — 15%
@@ -731,6 +733,148 @@ app.get('/api/players/search', (req, res) => {
     res.json({ players: list });
   } catch (e) {
     res.json({ players: [] });
+  }
+});
+
+
+
+// ========== ОНЛАЙН + ЧАТ ==========
+function loadChat() {
+  try {
+    if (fs.existsSync(CHAT_FILE)) return JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8'));
+  } catch (e) {}
+  return { global: [] };
+}
+function saveChat(data) {
+  try { fs.writeFileSync(CHAT_FILE, JSON.stringify(data), 'utf8'); } catch (e) { console.error(e); }
+}
+function loadPMs() {
+  try {
+    if (fs.existsSync(PM_FILE)) return JSON.parse(fs.readFileSync(PM_FILE, 'utf8'));
+  } catch (e) {}
+  return {};
+}
+function savePMs(data) {
+  try { fs.writeFileSync(PM_FILE, JSON.stringify(data), 'utf8'); } catch (e) { console.error(e); }
+}
+function pmKey(a, b) {
+  return [String(a), String(b)].sort().join('_');
+}
+
+/** Кто онлайн сейчас */
+app.get('/api/online', (req, res) => {
+  try {
+    const players = loadPlayers();
+    const now = Date.now();
+    const list = Object.values(players)
+      .filter(p => p.lastActive && (now - p.lastActive < ONLINE_MS))
+      .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
+      .slice(0, 50)
+      .map(p => ({
+        id: p.id,
+        name: p.name || 'Игрок',
+        level: p.level || 1,
+        lastActive: p.lastActive
+      }));
+    res.json({ success: true, online: list, count: list.length });
+  } catch (e) {
+    res.json({ success: true, online: [], count: 0 });
+  }
+});
+
+/** Глобальный чат — последние сообщения */
+app.get('/api/chat/global', (req, res) => {
+  try {
+    const chat = loadChat();
+    const msgs = (chat.global || []).slice(-40);
+    res.json({ success: true, messages: msgs });
+  } catch (e) {
+    res.json({ success: true, messages: [] });
+  }
+});
+
+/** Отправить в глобальный чат */
+app.post('/api/chat/global', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const text = String(req.body?.text || '').trim().slice(0, 200);
+    if (!userId || !text) return res.status(400).json({ success: false, error: 'empty' });
+    const players = loadPlayers();
+    const me = players[userId];
+    if (!me) return res.status(403).json({ success: false, error: 'Сначала зарегистрируйся' });
+    me.lastActive = Date.now();
+    players[userId] = me;
+    savePlayers(players);
+
+    const chat = loadChat();
+    if (!Array.isArray(chat.global)) chat.global = [];
+    const msg = {
+      id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      from: userId,
+      name: String(me.name || 'Игрок').slice(0, 24),
+      text,
+      time: Date.now()
+    };
+    chat.global.push(msg);
+    if (chat.global.length > 100) chat.global = chat.global.slice(-100);
+    saveChat(chat);
+    res.json({ success: true, message: msg });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: 'server error' });
+  }
+});
+
+/** Личная переписка */
+app.get('/api/chat/pm/:userId/:otherId', (req, res) => {
+  try {
+    const a = String(req.params.userId || '');
+    const b = String(req.params.otherId || '');
+    const pms = loadPMs();
+    const key = pmKey(a, b);
+    const msgs = (pms[key] || []).slice(-50);
+    res.json({ success: true, messages: msgs });
+  } catch (e) {
+    res.json({ success: true, messages: [] });
+  }
+});
+
+app.post('/api/chat/pm', (req, res) => {
+  try {
+    const fromId = String(req.body?.fromId || '').trim();
+    const toId = String(req.body?.toId || '').trim();
+    const text = String(req.body?.text || '').trim().slice(0, 200);
+    if (!fromId || !toId || !text) return res.status(400).json({ success: false, error: 'empty' });
+    if (fromId === toId) return res.status(400).json({ success: false, error: 'self' });
+
+    const players = loadPlayers();
+    const me = players[fromId];
+    const other = players[toId];
+    if (!me) return res.status(403).json({ success: false, error: 'Сначала зарегистрируйся' });
+    if (!other) return res.status(404).json({ success: false, error: 'Игрок не найден' });
+
+    me.lastActive = Date.now();
+    players[fromId] = me;
+    savePlayers(players);
+
+    const pms = loadPMs();
+    const key = pmKey(fromId, toId);
+    if (!Array.isArray(pms[key])) pms[key] = [];
+    const msg = {
+      id: 'pm_' + Date.now(),
+      from: fromId,
+      name: String(me.name || 'Игрок').slice(0, 24),
+      to: toId,
+      text,
+      time: Date.now()
+    };
+    pms[key].push(msg);
+    if (pms[key].length > 80) pms[key] = pms[key].slice(-80);
+    savePMs(pms);
+    res.json({ success: true, message: msg });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: 'server error' });
   }
 });
 
