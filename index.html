@@ -4,33 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.04-balance">
+  <meta name="app-version" content="2026.10.04-pretty">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg: #07140c;
-      --bg2: #0c1f14;
-      --surface: rgba(18, 36, 24, 0.92);
-      --surface2: rgba(255, 255, 255, 0.04);
-      --border: rgba(120, 200, 130, 0.12);
-      --border-strong: rgba(120, 200, 130, 0.22);
-      --text: #eaf5ec;
-      --hint: #7fa88a;
-      --button: #2e9b4a;
-      --button-text: #fff;
-      --secondary: #13281a;
-      --accent: #4ade80;
-      --accent-dim: #22c55e;
-      --danger: #f87171;
-      --warning: #fbbf24;
-      --purple: #a78bfa;
-      --blue: #38bdf8;
-      --gold: #fbbf24;
-      --radius: 14px;
-      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      /* Grow-room realism: soil, wood, warm LEDs */
+      --bg: #0f1812;
+      --bg2: #1a2420;
+      --surface: rgba(32, 42, 34, 0.94);
+      --surface2: rgba(255, 250, 235, 0.05);
+      --border: rgba(140, 150, 120, 0.18);
+      --border-strong: rgba(160, 170, 130, 0.3);
+      --text: #eef2e8;
+      --hint: #8a9a88;
+      --button: #3d7a3c;
+      --button-text: #f5f5e8;
+      --secondary: #1a221c;
+      --accent: #7cb87c;
+      --accent-dim: #5a9a5a;
+      --danger: #c45c4a;
+      --warning: #d4a017;
+      --purple: #8b7bb8;
+      --blue: #5a9ab8;
+      --gold: #d4a84b;
+      --soil: #3d2b1f;
+      --wood: #2a2218;
+      --led: #a8e6a0;
+      --radius: 12px;
+      --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
     }
     * {
       box-sizing: border-box;
@@ -41,17 +45,223 @@
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       padding-bottom: 28px;
       overflow-x: hidden;
+      letter-spacing: 0.015em;
+      /* Небо за стеклом теплицы */
       background:
-        radial-gradient(ellipse 120% 60% at 50% -10%, rgba(46, 155, 74, 0.18), transparent 55%),
-        radial-gradient(ellipse 80% 40% at 100% 50%, rgba(56, 189, 248, 0.05), transparent),
-        linear-gradient(180deg, #06120a 0%, #0a1a10 45%, #0d1f14 100%);
-      letter-spacing: 0.01em;
+        linear-gradient(180deg,
+          #87a8c4 0%,
+          #6b8fa8 8%,
+          #3d5a4a 18%,
+          #1a2e22 35%,
+          #0f1a14 60%,
+          #0a120e 100%);
     }
+    /* Поликарбонат / стекло + металлический каркас */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        /* вертикальные стойки каркаса */
+        repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 48px,
+          rgba(180, 190, 185, 0.07) 48px,
+          rgba(180, 190, 185, 0.07) 50px
+        ),
+        /* горизонтальные перекладины */
+        repeating-linear-gradient(
+          0deg,
+          transparent 0,
+          transparent 72px,
+          rgba(160, 170, 160, 0.05) 72px,
+          rgba(160, 170, 160, 0.05) 74px
+        ),
+        /* блик стекла */
+        linear-gradient(125deg,
+          rgba(255,255,255,0.06) 0%,
+          transparent 25%,
+          transparent 60%,
+          rgba(255,255,255,0.03) 80%,
+          transparent 100%);
+    }
+    /* Земля / грядка внизу */
+    body::after {
+      content: '';
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      height: 120px;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        linear-gradient(180deg,
+          transparent 0%,
+          rgba(45, 35, 22, 0.35) 40%,
+          rgba(35, 25, 15, 0.55) 100%);
+    }
+    .header, .tabs, .content { position: relative; z-index: 1; }
+
+    /* ========== РЕАЛИСТИЧНОЕ ОСВЕЩЕНИЕ И ТЕНИ ========== */
+    :root {
+      --light-sun: rgba(255, 230, 160, 0.55);
+      --light-led: rgba(160, 255, 180, 0.45);
+      --light-fill: rgba(120, 160, 140, 0.12);
+      --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.35);
+      --shadow-deep: 0 12px 28px rgba(0, 0, 0, 0.55);
+      --shadow-contact: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Солнечный луч / верхний свет теплицы */
+    .greenhouse-light {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140%;
+      height: 55vh;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 0%,
+          rgba(255, 240, 190, 0.18) 0%,
+          rgba(200, 220, 160, 0.06) 35%,
+          transparent 70%);
+      animation: sunDrift 18s ease-in-out infinite alternate;
+    }
+    @keyframes sunDrift {
+      0%   { opacity: 0.75; transform: translateX(-52%) scaleY(1); }
+      100% { opacity: 1;    transform: translateX(-48%) scaleY(1.05); }
+    }
+
+    /* Мягкие объёмные тени у карточек */
+    .card {
+      box-shadow:
+        var(--shadow-contact),
+        var(--shadow-soft),
+        0 16px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 240, 0.07),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* Горшок: свет сверху + контактная тень на земле */
+    .pot {
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.5),
+        0 8px 16px rgba(0, 0, 0, 0.45),
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        inset 0 2px 6px rgba(255, 255, 220, 0.1),
+        inset 0 -16px 28px rgba(20, 10, 0, 0.55) !important;
+      filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35));
+    }
+    .pot.ready {
+      filter:
+        drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35))
+        drop-shadow(0 0 12px rgba(160, 230, 120, 0.35));
+    }
+    .pot.needs-water {
+      filter:
+        drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35))
+        drop-shadow(0 0 8px rgba(80, 140, 220, 0.3));
+    }
+    .pot.sick, .pot.pests {
+      filter:
+        drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35))
+        drop-shadow(0 0 8px rgba(200, 80, 60, 0.35));
+    }
+
+    /* Блик на поверхности горшка (спекуляр) */
+    .pot .plant-container {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Кнопки: объём + тень */
+    .btn {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 220, 0.15) inset,
+        0 -2px 4px rgba(0, 0, 0, 0.25) inset,
+        0 4px 10px rgba(0, 0, 0, 0.35) !important;
+    }
+    .btn:active {
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.4) inset,
+        0 1px 2px rgba(0, 0, 0, 0.3) !important;
+      transform: translateY(1px) scale(0.98);
+    }
+
+    /* Шапка — верхний свет, низ в тени */
+    .header {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.1) inset,
+        0 6px 20px rgba(0, 0, 0, 0.4),
+        0 12px 40px rgba(0, 0, 0, 0.2) !important;
+    }
+    .stat {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
+        0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Модалка — soft box light */
+    .modal {
+      box-shadow:
+        0 -2px 0 rgba(255, 255, 255, 0.08) inset,
+        0 -12px 48px rgba(0, 0, 0, 0.55),
+        0 0 80px rgba(0, 0, 0, 0.35) !important;
+    }
+    .modal-overlay {
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(40, 60, 40, 0.25), transparent 50%),
+        rgba(0, 0, 0, 0.42) !important;
+    }
+
+    /* Ферма: лёгкий объём секции */
+    #section-farm {
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 240, 0.06),
+        inset 0 0 60px rgba(0, 0, 0, 0.25),
+        0 8px 24px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Ранг / рефералка */
+    .rank-card {
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    }
+    .rank-card.top1 {
+      box-shadow:
+        0 0 16px rgba(212, 168, 75, 0.25),
+        0 4px 12px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 230, 150, 0.15) !important;
+    }
+
+    /* Тосты */
+    .toast {
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.45),
+        0 0 24px rgba(80, 140, 80, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Полоски прогресса — глубина */
+    .bar {
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+      background: rgba(0, 0, 0, 0.35) !important;
+    }
+    .bar-fill {
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.15) !important;
+    }
+
+
     .snoop-high {
       animation: snoopMelt 2.5s ease-in-out infinite alternate;
       filter: blur(2.5px) saturate(1.4) hue-rotate(15deg);
@@ -163,16 +373,19 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(7, 20, 12, 0.88);
-      backdrop-filter: blur(16px) saturate(1.2);
-      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      background:
+        linear-gradient(180deg, rgba(55, 65, 58, 0.92) 0%, rgba(30, 38, 32, 0.94) 100%);
+      backdrop-filter: blur(14px) saturate(1.1);
+      -webkit-backdrop-filter: blur(14px) saturate(1.1);
       padding: 10px 12px 8px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 8px;
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      border-bottom: 2px solid rgba(140, 150, 130, 0.25);
+      box-shadow:
+        0 4px 20px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.08);
     }
     .stats {
       display: flex;
@@ -231,9 +444,9 @@
     }
     .tabs {
       display: flex;
-      background: rgba(7, 20, 12, 0.75);
+      background: linear-gradient(180deg, rgba(40, 48, 42, 0.9), rgba(22, 28, 24, 0.95));
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid rgba(120, 130, 110, 0.2);
       overflow-x: auto;
       padding: 6px 8px;
       gap: 4px;
@@ -241,6 +454,7 @@
       flex-wrap: nowrap;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
@@ -260,16 +474,23 @@
     }
     .tab.active {
       opacity: 1;
-      color: #052e16;
-      background: linear-gradient(135deg, #4ade80, #22c55e);
-      border-color: rgba(255,255,255,0.15);
-      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+      color: #f5f0e0;
+      background: linear-gradient(135deg, #3d6b3a, #2d5a2c);
+      border-color: rgba(180, 160, 90, 0.3);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,200,0.1);
       font-weight: 700;
     }
     .content {
-      padding: 12px 10px 24px;
+      padding: 10px 10px 32px;
       max-width: 520px;
       margin: 0 auto;
+    }
+    #section-farm {
+      background: rgba(20, 28, 22, 0.35);
+      border: 1px solid rgba(120, 130, 100, 0.15);
+      border-radius: 14px;
+      padding: 10px 8px 12px;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.2);
     }
     .section {
       display: none;
@@ -280,20 +501,81 @@
     .farm-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      gap: 12px;
+      padding: 4px 2px 8px;
+      /* грядки на столе */
+      background:
+        linear-gradient(180deg, rgba(60, 50, 30, 0.15), transparent 30%),
+        repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 49%,
+          rgba(80, 70, 40, 0.08) 49%,
+          rgba(80, 70, 40, 0.08) 51%
+        );
+      border-radius: 12px;
+    }
+    #section-farm > .btn,
+    #btn-buy-pot {
+      margin-top: 8px;
+    }
+    .greenhouse-label {
+      text-align: center;
+      font-size: 10px;
+      color: rgba(200, 210, 180, 0.55);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin: 4px 0 10px;
+      font-weight: 600;
     }
     .pot {
-      background: linear-gradient(160deg, rgba(28, 48, 34, 0.95), rgba(12, 24, 16, 0.98));
-      border-radius: 18px;
-      padding: 12px 8px 10px;
+      /* керамический / пластиковый горшок на столе теплицы */
+      background:
+        linear-gradient(180deg, rgba(255,255,240,0.04) 0%, transparent 20%),
+        linear-gradient(180deg, #2a3228 0%, #1e261e 40%, #3d2e1f 78%, #2a1e14 100%);
+      border-radius: 10px 10px 16px 16px;
+      padding: 10px 8px 12px;
       text-align: center;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(100, 85, 55, 0.4);
+      border-bottom: 3px solid rgba(40, 28, 16, 0.8);
       min-height: 210px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
-      transition: border-color 0.25s, box-shadow 0.25s;
+      box-shadow:
+        0 8px 18px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,230,0.08),
+        inset 0 -12px 24px rgba(30, 18, 8, 0.5);
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    /* LED-лампа над растением */
+    .pot::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 15%; right: 15%;
+      height: 3px;
+      border-radius: 0 0 4px 4px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(180, 255, 160, 0.25) 20%,
+        rgba(200, 255, 180, 0.55) 50%,
+        rgba(180, 255, 160, 0.25) 80%,
+        transparent);
+      box-shadow: 0 4px 16px rgba(140, 220, 120, 0.25);
+    }
+    /* почва внизу горшка */
+    .pot::after {
+      content: '';
+      position: absolute;
+      left: 8%; right: 8%;
+      bottom: 0;
+      height: 14px;
+      border-radius: 0 0 12px 12px;
+      background: linear-gradient(180deg, #4a3520 0%, #2e2014 100%);
+      opacity: 0.85;
+      pointer-events: none;
     }
     .pot .pot-emoji {
       font-size: 32px;
@@ -316,8 +598,16 @@
       margin: 2px 0;
     }
     .pot.ready {
-      border-color: rgba(74, 222, 128, 0.55);
-      box-shadow: 0 0 28px rgba(74, 222, 128, 0.2), var(--shadow);
+      border-color: rgba(160, 210, 100, 0.55);
+      box-shadow:
+        0 0 20px rgba(140, 200, 80, 0.2),
+        0 8px 18px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,230,0.1);
+    }
+    .pot.ready::before {
+      background: linear-gradient(90deg, transparent, rgba(220, 255, 160, 0.75), transparent);
+      box-shadow: 0 6px 20px rgba(180, 255, 120, 0.4);
+      height: 4px;
     }
     .pot.needs-water {
       border-color: var(--blue);
@@ -408,16 +698,16 @@
       width: 100%;
     }
     .btn {
-      background: linear-gradient(135deg, #2e9b4a, #22c55e);
+      background: linear-gradient(180deg, #4a7a45 0%, #356035 100%);
       color: var(--button-text);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
+      border: 1px solid rgba(200, 180, 100, 0.2);
+      border-radius: 10px;
       padding: 8px 14px;
       font-size: 12px;
       font-weight: 650;
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
-      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,200,0.12);
       min-height: 38px;
       display: inline-flex;
       align-items: center;
@@ -475,14 +765,14 @@
       color: #fff;
     }
     .card {
-      background: var(--surface);
-      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(32, 38, 32, 0.95), rgba(22, 26, 22, 0.98));
+      border-radius: 12px;
       padding: 12px;
       display: flex;
       align-items: center;
       gap: 10px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      border: 1px solid rgba(100, 90, 60, 0.25);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,245,200,0.04);
       margin-bottom: 6px;
     }
     .card-emoji {
@@ -562,15 +852,19 @@
       display: flex;
     }
     .modal {
-      background: linear-gradient(180deg, #153222 0%, #0c1c12 100%);
-      border-radius: 22px 22px 12px 12px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 20%),
+        linear-gradient(180deg, #1e2a22 0%, #121a14 100%);
+      border-radius: 16px 16px 10px 10px;
       width: 100%;
       max-width: 460px;
       max-height: 78vh;
       overflow-y: auto;
       padding: 18px 16px;
-      border: 1px solid var(--border-strong);
-      box-shadow: 0 -8px 40px rgba(0,0,0,0.45);
+      border: 1px solid rgba(160, 170, 140, 0.25);
+      box-shadow:
+        0 -8px 40px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
     }
     .modal-title {
       font-size: 17px;
@@ -930,6 +1224,364 @@
       text-align: center;
     }
 
+  
+    body.greenhouse-night .greenhouse-light {
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%,
+          rgba(100, 140, 200, 0.08) 0%,
+          transparent 60%);
+      opacity: 0.5;
+    }
+    body.greenhouse-night {
+      filter: brightness(0.92) saturate(0.9);
+    }
+    body.greenhouse-night .pot::before {
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(140, 180, 255, 0.2) 20%,
+        rgba(160, 200, 255, 0.4) 50%,
+        rgba(140, 180, 255, 0.2) 80%,
+        transparent) !important;
+      box-shadow: 0 4px 20px rgba(100, 160, 255, 0.25) !important;
+    }
+
+  
+    /* ========== POLISH v5 — красивый UI ========== */
+    :root {
+      --bg: #0b1210;
+      --text: #f4f7f2;
+      --hint: #8fa392;
+      --accent: #6ecf7a;
+      --accent-dim: #3d9a55;
+      --gold: #e8c35a;
+      --danger: #e87060;
+      --radius: 16px;
+      --glass: rgba(28, 40, 32, 0.72);
+      --stroke: rgba(180, 200, 170, 0.14);
+    }
+
+    body {
+      background:
+        radial-gradient(ellipse 100% 70% at 50% -15%, rgba(255, 220, 140, 0.14), transparent 45%),
+        radial-gradient(ellipse 50% 40% at 90% 60%, rgba(80, 160, 100, 0.08), transparent),
+        linear-gradient(165deg, #1a2830 0%, #0e1612 28%, #0a100e 70%, #0c1410 100%) !important;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      opacity: 0.035 !important;
+    }
+
+    .greenhouse-light {
+      background:
+        radial-gradient(ellipse 75% 50% at 50% -5%,
+          rgba(255, 235, 180, 0.22) 0%,
+          rgba(180, 220, 140, 0.06) 40%,
+          transparent 70%) !important;
+    }
+
+    .header {
+      background: rgba(16, 24, 20, 0.78) !important;
+      backdrop-filter: blur(20px) saturate(1.3) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(1.3) !important;
+      border-bottom: 1px solid var(--stroke) !important;
+      padding: 12px 14px 10px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35) !important;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid var(--stroke) !important;
+      padding: 5px 11px !important;
+      border-radius: 999px !important;
+      font-size: 11px !important;
+      backdrop-filter: blur(8px);
+    }
+    .stat span {
+      color: var(--accent) !important;
+      font-weight: 700 !important;
+    }
+
+    .level-badge {
+      background: linear-gradient(135deg, #7c5cbf, #a78bfa) !important;
+      border-radius: 999px !important;
+      padding: 6px 14px !important;
+      box-shadow: 0 4px 16px rgba(124, 92, 191, 0.4) !important;
+      font-size: 11px !important;
+    }
+
+    .tabs {
+      background: rgba(12, 18, 14, 0.85) !important;
+      padding: 8px 10px !important;
+      gap: 6px !important;
+      border-bottom: 1px solid var(--stroke) !important;
+    }
+    .tab {
+      padding: 9px 14px !important;
+      border-radius: 999px !important;
+      font-size: 12px !important;
+      opacity: 0.5 !important;
+      transition: all 0.25s cubic-bezier(0.34, 1.2, 0.64, 1) !important;
+    }
+    .tab.active {
+      opacity: 1 !important;
+      color: #0a160e !important;
+      background: linear-gradient(135deg, #8fdf9a, #5bc46a) !important;
+      box-shadow: 0 4px 18px rgba(91, 196, 106, 0.4) !important;
+      border: none !important;
+      font-weight: 700 !important;
+    }
+
+    .content {
+      padding: 14px 12px 36px !important;
+    }
+
+    #section-farm {
+      background: rgba(18, 28, 22, 0.5) !important;
+      border: 1px solid var(--stroke) !important;
+      border-radius: 20px !important;
+      padding: 14px 12px 16px !important;
+      backdrop-filter: blur(8px);
+      box-shadow:
+        0 12px 40px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.06) !important;
+    }
+
+    .greenhouse-label {
+      font-size: 11px !important;
+      letter-spacing: 0.18em !important;
+      color: rgba(180, 210, 170, 0.65) !important;
+      margin-bottom: 12px !important;
+    }
+
+    .farm-grid {
+      gap: 14px !important;
+      background: transparent !important;
+    }
+
+    .pot {
+      background:
+        linear-gradient(165deg, #2a3830 0%, #1a2420 45%, #2c2218 100%) !important;
+      border-radius: 18px !important;
+      border: 1px solid rgba(160, 180, 140, 0.2) !important;
+      padding: 14px 10px 16px !important;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.3),
+        0 12px 28px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,240,0.08) !important;
+      filter: none !important;
+      transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+    }
+    .pot:active {
+      transform: scale(0.98);
+    }
+    .pot.ready {
+      border-color: rgba(140, 220, 120, 0.55) !important;
+      box-shadow:
+        0 0 0 1px rgba(140, 220, 120, 0.25),
+        0 0 28px rgba(100, 200, 100, 0.22),
+        0 12px 28px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(200,255,180,0.12) !important;
+    }
+    .pot::before {
+      height: 3px !important;
+      border-radius: 0 0 6px 6px !important;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(180, 255, 160, 0.5) 50%,
+        transparent 100%) !important;
+      box-shadow: 0 6px 20px rgba(140, 230, 140, 0.3) !important;
+    }
+    .pot::after {
+      height: 12px !important;
+      background: linear-gradient(180deg, #5a4030, #2a1c12) !important;
+      border-radius: 0 0 14px 14px !important;
+    }
+    .pot-name {
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.02em;
+    }
+    .pot-status {
+      font-size: 11px !important;
+      color: var(--hint) !important;
+      margin-bottom: 6px !important;
+    }
+
+    .btn {
+      background: linear-gradient(180deg, #5aad62 0%, #3d8f48 100%) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 14px !important;
+      font-size: 12px !important;
+      font-weight: 650 !important;
+      padding: 10px 16px !important;
+      min-height: 40px !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.2) inset,
+        0 4px 14px rgba(40, 120, 50, 0.35) !important;
+      transition: transform 0.15s, filter 0.15s, box-shadow 0.15s !important;
+    }
+    .btn:active {
+      transform: scale(0.96) translateY(1px) !important;
+      filter: brightness(0.92);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid var(--stroke) !important;
+      box-shadow: none !important;
+      color: var(--text) !important;
+    }
+    .btn-gold {
+      background: linear-gradient(180deg, #e8c35a, #c9a030) !important;
+      color: #1a1408 !important;
+      box-shadow: 0 4px 14px rgba(200, 160, 40, 0.35) !important;
+    }
+    .btn-police {
+      background: linear-gradient(180deg, #3d4a8f, #2a3366) !important;
+    }
+    .btn-warning {
+      background: linear-gradient(180deg, #e8a830, #c48020) !important;
+      color: #1a1200 !important;
+    }
+    .btn-purple {
+      background: linear-gradient(180deg, #8b6fd4, #6b4cb0) !important;
+    }
+
+    .card {
+      background: rgba(24, 34, 28, 0.85) !important;
+      border: 1px solid var(--stroke) !important;
+      border-radius: 16px !important;
+      padding: 14px !important;
+      margin-bottom: 8px !important;
+      box-shadow:
+        0 4px 16px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.05) !important;
+      backdrop-filter: blur(6px);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card-emoji {
+      width: 44px !important;
+      height: 44px !important;
+      border-radius: 14px !important;
+      background: rgba(255,255,255,0.05) !important;
+      border: 1px solid var(--stroke) !important;
+      font-size: 24px !important;
+    }
+    .card-title {
+      font-size: 14px !important;
+      font-weight: 700 !important;
+    }
+    .card-desc {
+      font-size: 11px !important;
+      color: var(--hint) !important;
+      margin-top: 3px !important;
+    }
+
+    .section-title {
+      font-size: 11px !important;
+      color: var(--accent) !important;
+      letter-spacing: 0.1em !important;
+      margin: 16px 0 10px !important;
+    }
+
+    .modal {
+      background: linear-gradient(180deg, #1e2c24 0%, #121a16 100%) !important;
+      border-radius: 24px 24px 16px 16px !important;
+      border: 1px solid rgba(180, 200, 160, 0.2) !important;
+      padding: 20px 18px !important;
+      box-shadow:
+        0 -4px 0 rgba(255,255,255,0.06) inset,
+        0 -20px 60px rgba(0,0,0,0.55) !important;
+    }
+    .modal-title {
+      font-size: 18px !important;
+      font-weight: 750 !important;
+      margin-bottom: 16px !important;
+    }
+    .modal-overlay {
+      background: rgba(0, 0, 0, 0.45) !important;
+      backdrop-filter: blur(4px) !important;
+    }
+
+    .toast {
+      background: linear-gradient(135deg, #4aad58, #2d8a3e) !important;
+      border-radius: 999px !important;
+      padding: 12px 20px !important;
+      font-size: 13px !important;
+      box-shadow: 0 8px 28px rgba(45, 140, 60, 0.45) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+    .toast.error {
+      background: linear-gradient(135deg, #e87060, #c04030) !important;
+      box-shadow: 0 8px 28px rgba(200, 60, 40, 0.4) !important;
+    }
+
+    .empty {
+      border-radius: 18px !important;
+      padding: 32px 16px !important;
+      background: rgba(255,255,255,0.03) !important;
+      border: 1px dashed var(--stroke) !important;
+    }
+
+    .rank-card {
+      border-radius: 14px !important;
+      padding: 10px 12px !important;
+      background: rgba(24, 34, 28, 0.9) !important;
+      margin-bottom: 6px !important;
+    }
+    .rank-card.top1 {
+      border-color: rgba(232, 195, 90, 0.5) !important;
+      background: linear-gradient(135deg, rgba(232, 195, 90, 0.12), rgba(24,34,28,0.95)) !important;
+    }
+
+    .bar {
+      height: 6px !important;
+      border-radius: 999px !important;
+      background: rgba(0,0,0,0.4) !important;
+      overflow: hidden;
+    }
+    .bar-fill {
+      border-radius: 999px !important;
+      transition: width 0.4s ease;
+    }
+
+    .friend-item, .request-item {
+      border-radius: 14px !important;
+      background: rgba(24, 34, 28, 0.85) !important;
+      border: 1px solid var(--stroke) !important;
+    }
+
+    .social-input {
+      border-radius: 14px !important;
+      padding: 12px 14px !important;
+      background: rgba(0,0,0,0.25) !important;
+      border: 1px solid var(--stroke) !important;
+      font-size: 14px !important;
+    }
+
+    .register-banner {
+      border-radius: 18px !important;
+      border: 1px solid rgba(110, 207, 122, 0.35) !important;
+      background: linear-gradient(145deg, rgba(60, 140, 70, 0.2), rgba(20, 40, 25, 0.5)) !important;
+    }
+
+    #btn-music {
+      border-radius: 999px !important;
+      width: 36px !important;
+      height: 36px !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid var(--stroke) !important;
+    }
+
+    .police-alert {
+      border-radius: 16px !important;
+      font-weight: 650 !important;
+    }
+
+
   </style>
 </head>
 <body>
@@ -1083,6 +1735,7 @@
     </div>
   </div>
 
+  <div class="greenhouse-light" aria-hidden="true"></div>
   <div class="header">
     <div class="stats">
       <div class="stat">💰 <span id="money">0</span>$</div>
@@ -1094,7 +1747,7 @@
       <div class="time-display">🕐 <span id="gameTime">12:00</span> <span id="dayPhase">☀️</span></div>
     </div>
     <div class="level-badge" id="xp-badge">0 XP</div>
-    <button class="btn btn-small" id="btn-music" onclick="toggleReggae()" style="margin-left:4px;min-width:36px;padding:4px 8px;" title="Регги">🎵</button>
+    <button class="btn btn-small" id="btn-music" onclick="cycleMusic()" style="margin-left:4px;min-width:40px;padding:4px 8px;" title="Музыка">🎵</button>
   </div>
 
   <div class="tabs">
@@ -1112,6 +1765,7 @@
 
   <div class="content">
     <div class="section active" id="section-farm">
+      <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
@@ -1236,17 +1890,30 @@
         <div id="bonus-log" style="margin-top:6px;font-size:10px;color:var(--hint);max-height:100px;overflow-y:auto;"></div>
       </div>
       <div style="margin-top:10px;">
+        <div class="section-title">🟢 Онлайн сейчас</div>
+        <div id="online-list" style="margin-bottom:10px;font-size:12px;">
+          <div class="empty" style="padding:12px;">Загрузка...</div>
+        </div>
+
         <div class="section-title">💬 Чат</div>
-        <div class="chat-window" id="chatWindow">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button class="btn btn-small" id="chat-tab-global" onclick="setChatMode('global')" style="flex:1;">🌐 Общий</button>
+          <button class="btn btn-small btn-secondary" id="chat-tab-pm" onclick="setChatMode('pm')" style="flex:1;">✉️ Личный</button>
+        </div>
+        <div id="pm-target-row" style="display:none;margin-bottom:6px;">
+          <select id="pm-select" class="social-input" style="width:100%;" onchange="loadPrivateChat()">
+            <option value="">— выбери игрока —</option>
+          </select>
+        </div>
+        <div class="chat-window" id="chatWindow" style="min-height:140px;max-height:220px;overflow-y:auto;background:rgba(0,0,0,0.2);border-radius:12px;padding:8px;border:1px solid rgba(160,180,140,0.15);">
           <div class="chat-message">
-            <span class="sender">🤖 Система:</span>
-            <span class="time">сейчас</span>
-            <div>Добро пожаловать в чат!</div>
+            <span class="sender">🤖 Система</span>
+            <div>Общий чат сервера. Будь вежлив.</div>
           </div>
         </div>
-        <div class="chat-input-row">
-          <input class="chat-input" id="chatInput" placeholder="💬 Напиши сообщение...">
-          <button class="btn btn-small btn-blue" onclick="sendChatMessage()">📤</button>
+        <div class="chat-input-row" style="display:flex;gap:6px;margin-top:6px;">
+          <input class="chat-input social-input" id="chatInput" placeholder="💬 Сообщение..." style="flex:1;" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="btn btn-small" onclick="sendChatMessage()">📤</button>
         </div>
       </div>
     </div>
@@ -1360,7 +2027,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v4-balance · 04.10';
+    const APP_VERSION = 'v5.1-chat · 04.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -1463,13 +2130,15 @@
     ];
 
     const PRODUCTS = {
-      dried: { name: 'Сушка', emoji: '🍂', mult: 1.4, energy: 3, from: 'raw', need: 1 },
+      // drySec — секунд на 1 ед. сушки (пачка чуть быстрее за счёт объёма)
+      dried: { name: 'Сушка', emoji: '🍂', mult: 1.4, energy: 2, from: 'raw', need: 1, drySec: 45 },
       joint: { name: 'Косяк', emoji: '🚬', mult: 1.9, energy: 5, from: 'dried', need: 1 },
       oil: { name: 'Масло', emoji: '🧴', mult: 2.4, energy: 8, from: 'dried', need: 2 },
       edible: { name: 'Еда', emoji: '🍪', mult: 2.8, energy: 10, from: 'dried', need: 3 }
     };
+    const DRY_MAX_SLOTS = 4; // одновременных партий на сушилке
 
-    const STAGE_NAMES = ['', '🌱 Росток', '🌿 Молодое', '🌳 Вегетация', '🌸 Цветение', '✨ Готово'];
+    const STAGE_NAMES = ['', '🌱 Пророст', '🌿 Рассада', '🌳 Вегетация', '🌸 Цветение', '✨ Готово к сбору'];
     const STAGE_EMOJI = ['', '🌱', '🌿', '🌳', '🌸', '✨'];
 
     const ACHIEVEMENTS = [
@@ -1544,6 +2213,7 @@
       lamps: {},
       ferts: {},
       room: { vent: false, auto: false, heater: false },
+      dryQueue: [],
       referrals: 0,
       referralEarned: 0,
       referralsList: [],
@@ -1830,12 +2500,27 @@
         state.nextPotId = 2;
       }
       state.pots.forEach(pot => {
-        if (pot.isActive === undefined) pot.isActive = true;
+        if (pot.isActive === undefined || pot.isActive === null) pot.isActive = true;
+        if (pot.isActive === false) pot.isActive = true; // старые «закрытые» — открываем
         if (pot.pests === undefined) pot.pests = false;
         if (pot.pestLevel === undefined) pot.pestLevel = 0;
         if (pot.thc === undefined) pot.thc = 0;
         if (pot.water === undefined) pot.water = 80;
+        // Залипшее растение без plantedAt
+        if (pot.strain && !pot.plantedAt) {
+          pot.strain = null;
+          pot.stage = 0;
+        }
+        // Невалидный сорт
+        if (pot.strain && typeof getStrain === 'function' && !getStrain(pot.strain)) {
+          pot.strain = null;
+          pot.plantedAt = null;
+          pot.stage = 0;
+        }
       });
+      // nextPotId не меньше max id
+      const maxId = state.pots.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
+      if (!state.nextPotId || state.nextPotId <= maxId) state.nextPotId = maxId + 1;
 
       if (!state.totalEarned) state.totalEarned = 0;
       if (!state.heat) state.heat = 0;
@@ -2668,13 +3353,39 @@
 
         pot.water = Math.max(0, pot.water - waterDrain * dt);
 
+        // Оценка ухода (для качества урожая)
+        if (pot.careSamples == null) pot.careSamples = 0;
+        if (pot.careSum == null) pot.careSum = 0;
+        pot.careSamples += dt;
+        pot.careSum += (pot.water || 0) * dt;
+        if (pot.careSamples > 0) {
+          pot.careScore = pot.careSum / pot.careSamples;
+        }
+
+        // Засуха
         if (pot.water < 5) {
-          pot.health = Math.max(0, pot.health - 0.5 * dt);
+          pot.health = Math.max(0, pot.health - 0.55 * dt);
+        } else if (pot.water < 15) {
+          pot.health = Math.max(0, pot.health - 0.2 * dt);
+        }
+        // Перелив — корни гниют
+        if (pot.water > 95) {
+          pot.health = Math.max(0, pot.health - 0.35 * dt);
+          if (Math.random() < 0.002 * dt) {
+            pot.disease = true;
+          }
+        }
+
+        // Цветение пахнет — палево растёт
+        if (pot.stage >= 4 && pot.stage < 5) {
+          addHeat(0.015 * dt * (state.room && state.room.vent ? 0.4 : 1));
+        } else if (pot.stage >= 5) {
+          addHeat(0.025 * dt * (state.room && state.room.vent ? 0.35 : 1));
         }
 
         if (pot.lamp && pot.stage > 0 && pot.stage < 5) {
           const cost = LAMP_ENERGY_COST[pot.lamp] || 0;
-          state.energy = Math.max(0, state.energy - cost * dt * 0.2);
+          state.energy = Math.max(0, state.energy - cost * dt * 0.08);
         }
 
         let healthRegen = 0.15;
@@ -2797,16 +3508,36 @@
       const weather = getWeatherMult();
       mult *= weather.speedMult;
 
+      // Реализм: зона комфорта воды 35–75%. Сушь/перелив тормозят рост.
+      const w = pot.water || 0;
+      if (w < 15) mult *= 0.35;
+      else if (w < 30) mult *= 0.65;
+      else if (w > 90) mult *= 0.55;
+      else if (w > 80) mult *= 0.8;
+      else if (w >= 40 && w <= 70) mult *= 1.08; // идеальная влажность
+
+      // Здоровье влияет на скорость
+      const h = pot.health || 0;
+      if (h < 40) mult *= 0.5;
+      else if (h < 60) mult *= 0.75;
+      else if (h >= 90) mult *= 1.05;
+
+      if (pot.disease) mult *= 0.55;
+      if (pot.pests) mult *= 0.6;
+
       if (pot.lamp && state.energy > 2) {
         const l = getLamp(pot.lamp);
         if (l) {
           const ef = Math.min(1, state.energy / 15);
           mult *= (1 + (l.power - 1) * ef);
         }
+      } else {
+        // Без лампы днём ок, номедленнее; ночью почти стоп (уже в tick)
+        mult *= 0.85;
       }
-      if (state.room.heater) mult *= 1.15;
-      if (state.room.vent) mult *= 1.05;
-      if (mult < 0.1) mult = 0.1;
+      if (state.room && state.room.heater) mult *= 1.12;
+      if (state.room && state.room.vent) mult *= 1.06;
+      if (mult < 0.08) mult = 0.08;
       return s.baseTime / mult;
     }
 
@@ -2829,17 +3560,22 @@
 
     function getQuality(pot) {
       let q = 1.0;
-      if (pot.health >= 90) q += 0.25;
-      else if (pot.health >= 70) q += 0.1;
-      else if (pot.health < 40) q -= 0.3;
+      if (pot.health >= 90) q += 0.3;
+      else if (pot.health >= 70) q += 0.12;
+      else if (pot.health < 40) q -= 0.35;
+      // Уход: средний уровень воды за жизнь растения (если копим)
+      if (pot.careScore != null) {
+        if (pot.careScore >= 80) q += 0.2;
+        else if (pot.careScore < 40) q -= 0.25;
+      }
       if (pot.lamp && state.energy > 5) {
         const l = getLamp(pot.lamp);
         if (l) {
           const ef = Math.min(1, state.energy / 25);
-          q += (l.power - 1) * 0.3 * ef;
+          q += (l.power - 1) * 0.25 * ef;
         }
       }
-      if (pot.fert) q += 0.15;
+      if (pot.fert) q += 0.12;
       if (pot.disease) q -= 0.4;
       if (pot.pests) q -= 0.5;
       const strain = getStrain(pot.strain);
@@ -3003,9 +3739,15 @@
 
       STRAINS.forEach(s => {
         const unlocked = state.level >= s.unlock;
-        const can = state.money >= s.seedPrice && state.energy >= s.energyCost;
+        const canMoney = Math.floor(state.money) >= s.seedPrice;
+        const canEnergy = Math.floor(state.energy) >= s.energyCost;
+        const can = unlocked && canMoney && canEnergy;
         const c = document.createElement('div');
         c.className = 'card' + (unlocked ? '' : ' card-locked');
+        let reason = '';
+        if (!unlocked) reason = '🔒 ур.' + s.unlock;
+        else if (!canMoney) reason = 'мало $';
+        else if (!canEnergy) reason = 'мало ⚡';
         c.innerHTML = `
               <div class="card-emoji">${s.emoji}</div>
               <div class="card-info">
@@ -3013,14 +3755,12 @@
                   <div class="card-desc">⏱ ${Math.floor(s.baseTime/60)}м · ${s.yield} шт · 💰${s.sellPrice}$</div>
               </div>
               <div style="text-align:right">
-                  <div style="color:${unlocked ? 'var(--accent)' : 'var(--hint)'};font-weight:700;">${s.seedPrice}$</div>
-                  <div style="font-size:8px;color:var(--hint)">⚡${s.energyCost}</div>
+                  <div style="color:${can ? 'var(--accent)' : 'var(--hint)'};font-weight:700;">${s.seedPrice}$</div>
+                  <div style="font-size:8px;color:var(--hint)">⚡${s.energyCost}${reason ? ' · ' + reason : ''}</div>
               </div>
           `;
-        if (unlocked && can) {
-          c.style.cursor = 'pointer';
-          c.onclick = () => plantSeed(s.id);
-        }
+        c.style.cursor = 'pointer';
+        c.onclick = () => plantSeed(s.id);
         list.appendChild(c);
       });
       document.getElementById('modal-seed').classList.add('show');
@@ -3029,11 +3769,13 @@
     function plantHybrid(hybridId) {
       const h = state.hybrids.find(h => h.id === hybridId);
       if (!h) return;
-      const pot = state.pots.find(p => p.id === selectedPotId);
-      if (!pot || !pot.isActive || pot.strain) {
+      let pot = findPot(selectedPotId);
+      if (!pot) pot = state.pots.find(p => isPotPlantable(p));
+      if (!pot || !isPotPlantable(pot)) {
         showToast('Горшок занят или неактивен', true);
         return;
       }
+      if (pot.strain && !pot.plantedAt) clearPotPlant(pot);
       if (state.money < 100) {
         showToast('Нужно 100$ для посадки гибрида', true);
         return;
@@ -3062,20 +3804,35 @@
     function plantSeed(sid) {
       if (typeof guardJailAction === "function" && guardJailAction()) return;
       const s = getStrain(sid);
-      if (!s) return;
+      if (!s) { showToast('Сорт не найден', true); return; }
       if (state.level < (s.unlock || 1)) {
         showToast('Нужен уровень ' + s.unlock, true);
         return;
       }
-      if (Math.floor(state.money) < s.seedPrice || Math.floor(state.energy) < s.energyCost) {
-        showToast('Не хватает ресурсов (нужно ' + s.seedPrice + '$ и ' + s.energyCost + '⚡)', true);
+      if (Math.floor(state.money) < s.seedPrice) {
+        showToast('Мало денег (нужно ' + s.seedPrice + '$, есть ' + Math.floor(state.money) + '$)', true);
         return;
       }
-      const pot = state.pots.find(p => p.id === selectedPotId);
-      if (!pot || !pot.isActive || pot.strain) {
-        showToast('Горшок занят или неактивен', true);
+      if (Math.floor(state.energy) < s.energyCost) {
+        showToast('Мало энергии (нужно ' + s.energyCost + '⚡, есть ' + Math.floor(state.energy) + '⚡). Подожди восстановления.', true);
         return;
       }
+      let pot = findPot(selectedPotId);
+      if (!pot) {
+        // fallback: первый свободный
+        pot = state.pots.find(p => isPotPlantable(p));
+      }
+      if (!pot) {
+        showToast('Нет свободного горшка — купи новый или собери урожай', true);
+        return;
+      }
+      if (pot.isActive === false) pot.isActive = true;
+      if (!isPotPlantable(pot)) {
+        showToast('Горшок занят — сначала собери урожай', true);
+        return;
+      }
+      if (pot.strain && !pot.plantedAt) clearPotPlant(pot);
+
       state.money = Math.floor(state.money) - s.seedPrice;
       state.energy = Math.floor(state.energy) - s.energyCost;
       pot.strain = sid;
@@ -3090,6 +3847,10 @@
       pot.yieldMult = 1;
       pot.lastTick = Date.now();
       pot.thc = 0;
+      pot.careScore = 50;
+      pot.careSum = 0;
+      pot.careSamples = 0;
+      pot.isActive = true;
       closeModal('modal-seed');
       showToast('🌱 Посажено: ' + s.emoji + ' ' + s.name);
       haptic('medium');
@@ -3422,6 +4183,34 @@
       return null;
     }
 
+
+    function tickDryQueue() {
+      if (!state.dryQueue || !state.dryQueue.length) return;
+      const now = Date.now();
+      let changed = false;
+      state.dryQueue.forEach(job => {
+        if (job.done) return;
+        if (now - job.startedAt >= job.duration) {
+          job.done = true;
+          const driedKey = job.strainId + '_dried';
+          state.inventory[driedKey] = (state.inventory[driedKey] || 0) + job.qty;
+          const s = getStrain(job.strainId);
+          showToast('🍂 Готово: сушка ' + (s ? s.name : '') + ' ×' + job.qty);
+          haptic('success');
+          changed = true;
+        }
+      });
+      // чистим старые done
+      state.dryQueue = state.dryQueue.filter(j => !j.done || (now - j.startedAt < j.duration + 60000));
+      state.dryQueue = state.dryQueue.filter(j => !j.done);
+      if (changed) {
+        save();
+        if (typeof renderProcess === 'function') renderProcess();
+        if (typeof renderInventory === 'function') renderInventory();
+        if (typeof renderHeader === 'function') renderHeader();
+      }
+    }
+
     function processItem(strainId, productType, qty) {
       const p = PRODUCTS[productType];
       if (!p) return;
@@ -3431,11 +4220,16 @@
       qty = Math.max(1, Math.floor(Number(qty) || 1));
 
       if (productType === 'dried') {
+        if (!state.dryQueue) state.dryQueue = [];
+        const active = state.dryQueue.filter(j => !j.done).length;
+        if (active >= DRY_MAX_SLOTS) {
+          showToast('Сушилка занята (макс ' + DRY_MAX_SLOTS + ' партии)', true);
+          return;
+        }
         const have = state.inventory[rawKey] || 0;
         if (have < 1) { showToast('Нет сырья', true); return; }
         qty = Math.min(qty, have);
         const energyNeed = p.energy * qty;
-        // Пачка ×5/×10 чуть экономнее по энергии (скидка 10%/15%)
         let energyCost = energyNeed;
         if (qty >= 10) energyCost = Math.ceil(energyNeed * 0.85);
         else if (qty >= 5) energyCost = Math.ceil(energyNeed * 0.90);
@@ -3443,12 +4237,27 @@
           showToast('Мало энергии (нужно ' + energyCost + '⚡)', true);
           return;
         }
+        // Время сушки: base * qty, пачка чуть эффективнее
+        let sec = (p.drySec || 45) * qty;
+        if (qty >= 10) sec *= 0.85;
+        else if (qty >= 5) sec *= 0.9;
+        // Лучшие сорта сохнут дольше
+        const s = getStrain(strainId);
+        if (s && s.quality) sec *= (0.9 + s.quality * 0.12);
+
         state.inventory[rawKey] = have - qty;
         if (state.inventory[rawKey] <= 0) delete state.inventory[rawKey];
         state.energy = Math.floor(state.energy) - energyCost;
-        state.inventory[driedKey] = (state.inventory[driedKey] || 0) + qty;
-        showToast('🍂 Высушено ×' + qty);
-        addHeat(0.6 * qty);
+        state.dryQueue.push({
+          id: 'dry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          strainId: strainId,
+          qty: qty,
+          startedAt: Date.now(),
+          duration: Math.max(20, Math.floor(sec)) * 1000,
+          done: false
+        });
+        addHeat(0.25 * qty);
+        showToast('🍂 На сушке ×' + qty + ' (~' + Math.ceil(sec) + ' сек)');
       } else {
         const need = (p.need || 1) * qty;
         if ((state.inventory[driedKey] || 0) < need) {
@@ -3741,6 +4550,11 @@
       const phase = hours >= 6 && hours < 18 ? '☀️ День' : '🌙 Ночь';
       document.getElementById('gameTime').textContent = timeStr;
       document.getElementById('dayPhase').textContent = hours >= 6 && hours < 18 ? '☀️' : '🌙';
+      try {
+        const hour = Math.floor((state.gameTime || 0) / 60) % 24;
+        const isNight = hour >= 21 || hour < 6;
+        document.body.classList.toggle('greenhouse-night', isNight);
+      } catch (e) {}
       document.getElementById('profile-time').textContent = timeStr + ' ' + phase;
     }
 
@@ -3868,113 +4682,165 @@
     const _origCalcBribe = null;
 
     // ============================================================
-    // ====== РЕГГИ (спокойный фон, Web Audio) ======
+    // ====== МУЗЫКА (регги + ambient теплицы, Web Audio) ======
     // ============================================================
-    let _reggaeTimer = null;
+    let _musicTimer = null;
+    let _musicMode = 0; // 0 off, 1 reggae, 2 ambient
     let _reggaeOn = false;
+    let _ambientNodes = [];
 
-    function toggleReggae() {
+    function cycleMusic() {
       const ctx = getAudioCtx();
-      if (!ctx) {
-        showToast('Аудио недоступно', true);
-        return;
-      }
-      if (_reggaeOn) {
-        stopReggae();
-        showToast('🎵 Музыка выкл');
-      } else {
+      if (!ctx) { showToast('Аудио недоступно', true); return; }
+      stopAllMusic();
+      _musicMode = (_musicMode + 1) % 3;
+      if (_musicMode === 1) {
         startReggae();
-        showToast('🎵 Регги вкл');
+        showToast('🎵 Регги');
+      } else if (_musicMode === 2) {
+        startAmbient();
+        showToast('🌿 Звуки теплицы');
+      } else {
+        showToast('🔇 Музыка выкл');
       }
-      const btn = document.getElementById('btn-music');
-      if (btn) btn.textContent = _reggaeOn ? '🎶' : '🎵';
-      state.musicOn = _reggaeOn;
+      updateMusicBtn();
+      state.musicOn = _musicMode > 0;
+      state.musicMode = _musicMode;
       try { save(); } catch (e) {}
     }
 
-    function stopReggae() {
-      _reggaeOn = false;
-      if (_reggaeTimer) {
-        clearInterval(_reggaeTimer);
-        _reggaeTimer = null;
-      }
+    function toggleReggae() { cycleMusic(); }
+
+    function updateMusicBtn() {
       const btn = document.getElementById('btn-music');
-      if (btn) btn.textContent = '🎵';
+      if (!btn) return;
+      btn.textContent = _musicMode === 0 ? '🎵' : (_musicMode === 1 ? '🎶' : '🌿');
+    }
+
+    function stopAllMusic() {
+      _reggaeOn = false;
+      if (_musicTimer) { clearInterval(_musicTimer); _musicTimer = null; }
+      _ambientNodes.forEach(n => { try { n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
+      _ambientNodes = [];
+    }
+
+    function stopReggae() { stopAllMusic(); updateMusicBtn(); }
+
+    function tone(ctx, freq, start, dur, type, vol) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start(start);
+      o.stop(start + dur + 0.05);
     }
 
     function startReggae() {
       const ctx = getAudioCtx();
       if (!ctx) return;
-      stopReggae();
+      stopAllMusic();
       _reggaeOn = true;
-      const btn = document.getElementById('btn-music');
-      if (btn) btn.textContent = '🎶';
+      _musicMode = 1;
+      updateMusicBtn();
 
-      // ~72 BPM, one-drop feel: bass on 1, skank on 2 and 4
-      const bpm = 72;
+      const bpm = 68;
       const beat = 60 / bpm;
       let step = 0;
-
-      // Am - F - C - G (мягкий регги-ход)
+      // Dorian-ish soft reggae: Dm - Bb - F - C
       const chords = [
-        [220.00, 261.63, 329.63], // A minor-ish
-        [174.61, 220.00, 261.63], // F
-        [130.81, 164.81, 196.00], // C
-        [196.00, 246.94, 293.66]  // G
+        [146.83, 174.61, 220.00],
+        [116.54, 146.83, 174.61],
+        [174.61, 220.00, 261.63],
+        [130.81, 164.81, 196.00]
       ];
-      const bassNotes = [110.00, 87.31, 65.41, 98.00];
-
-      function tone(freq, start, dur, type, vol) {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = type || 'sine';
-        o.frequency.setValueAtTime(freq, start);
-        g.gain.setValueAtTime(0.0001, start);
-        g.gain.exponentialRampToValueAtTime(vol, start + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.start(start);
-        o.stop(start + dur + 0.02);
-      }
+      const bassNotes = [73.42, 58.27, 87.31, 65.41];
 
       function tick() {
-        if (!_reggaeOn) return;
-        const ctx2 = getAudioCtx();
-        if (!ctx2) return;
-        const t = ctx2.currentTime;
-        const chord = chords[Math.floor(step / 4) % 4];
-        const bass = bassNotes[Math.floor(step / 4) % 4];
-        const beatInBar = step % 4;
+        if (!_reggaeOn || _musicMode !== 1) return;
+        const c = getAudioCtx();
+        if (!c) return;
+        const t = c.currentTime;
+        const ci = Math.floor(step / 4) % 4;
+        const chord = chords[ci];
+        const bass = bassNotes[ci];
+        const b = step % 4;
 
-        // Bass on beat 1 (and soft on 3)
-        if (beatInBar === 0) {
-          tone(bass, t, beat * 0.9, 'triangle', 0.06);
-          tone(bass / 2, t, beat * 0.9, 'sine', 0.04);
-        } else if (beatInBar === 2) {
-          tone(bass * 1.01, t, beat * 0.5, 'triangle', 0.03);
+        // soft bass one-drop
+        if (b === 0) {
+          tone(c, bass, t, beat * 0.85, 'triangle', 0.11);
+          tone(c, bass * 0.5, t, beat * 0.9, 'sine', 0.07);
         }
-
-        // Offbeat skank on 2 and 4
-        if (beatInBar === 1 || beatInBar === 3) {
-          chord.forEach((f, i) => {
-            tone(f, t, beat * 0.35, 'sine', 0.025 - i * 0.004);
-          });
+        // offbeat skank (2 & 4)
+        if (b === 1 || b === 3) {
+          chord.forEach((f, i) => tone(c, f, t, beat * 0.22, 'triangle', 0.028 - i * 0.004));
         }
-
-        // Soft hi-hat noise substitute (short high sine)
-        if (beatInBar === 1 || beatInBar === 3) {
-          tone(8000 + Math.random() * 1000, t, 0.04, 'sine', 0.008);
+        // soft rim on 3
+        if (b === 2) {
+          tone(c, 180, t, 0.04, 'square', 0.015);
         }
-
         step++;
       }
-
-      // Immediate first beats
       tick();
-      _reggaeTimer = setInterval(tick, beat * 1000);
+      _musicTimer = setInterval(tick, beat * 1000);
     }
 
+    /** Ambient: вентилятор + мягкий гул ламп + капли */
+    function startAmbient() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      stopAllMusic();
+      _musicMode = 2;
+      updateMusicBtn();
+
+      // Fan-like filtered noise via detuned oscillators as soft drone
+      function drone(freq, vol, type) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const f = ctx.createBiquadFilter();
+        o.type = type || 'sawtooth';
+        o.frequency.value = freq;
+        f.type = 'lowpass';
+        f.frequency.value = 400;
+        f.Q.value = 0.7;
+        g.gain.value = vol;
+        o.connect(f);
+        f.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        _ambientNodes.push(o);
+        return { o, g, f };
+      }
+      drone(55, 0.025, 'sawtooth');
+      drone(58, 0.018, 'sawtooth');
+      drone(110, 0.012, 'triangle');
+      // warm LED hum
+      drone(220, 0.008, 'sine');
+
+      // occasional water drip / soft tick
+      let dripStep = 0;
+      function dripTick() {
+        if (_musicMode !== 2) return;
+        const c = getAudioCtx();
+        if (!c) return;
+        dripStep++;
+        if (dripStep % 3 === 0) {
+          const t = c.currentTime;
+          tone(c, 1200 + Math.random() * 400, t, 0.06, 'sine', 0.012);
+          tone(c, 800 + Math.random() * 200, t + 0.02, 0.08, 'sine', 0.008);
+        }
+        // soft pad chord every ~8s
+        if (dripStep % 8 === 0) {
+          const t = c.currentTime;
+          [164.81, 196.00, 246.94].forEach((f, i) => tone(c, f, t, 2.5, 'sine', 0.012 - i * 0.002));
+        }
+      }
+      _musicTimer = setInterval(dripTick, 1000);
+    }
 
     // ============================================================
     // ====== ПОЛИЦИЯ И ПАЛЕВО ======
@@ -4460,12 +5326,14 @@
           else if (pot.water < 20) potClass += ' needs-water';
         }
         div.className = potClass;
-        if (!pot.strain) {
+        if (!pot.strain || !pot.plantedAt) {
+          if (pot.strain && !pot.plantedAt) clearPotPlant(pot);
+          pot.isActive = true;
           div.innerHTML = `
-                <div class="pot-emoji">${pot.isActive ? '🪴' : '🔒'}</div>
-                <div class="pot-name">${pot.isActive ? 'Пустой горшок' : 'Неактивный горшок'}</div>
-                <div class="pot-status">${pot.isActive ? 'Готов к посадке' : '❌ Недоступен'}</div>
-                ${pot.isActive ? `<button class="btn btn-full" onclick="openSeedModal(${pot.id})">🌱 Посадить</button>` : '<span style="font-size:9px;color:var(--hint);">🔒 Закрыт</span>'}
+                <div class="pot-emoji">🪴</div>
+                <div class="pot-name">Пустой горшок</div>
+                <div class="pot-status">Готов к посадке</div>
+                <button class="btn btn-full" onclick="openSeedModal(${pot.id})">🌱 Посадить</button>
             `;
         } else {
           const s = getStrain(pot.strain);
@@ -4681,6 +5549,21 @@
           list.appendChild(c);
         });
       }
+      // Очередь сушки
+      if (state.dryQueue && state.dryQueue.some(j => !j.done)) {
+        const qCard = document.createElement('div');
+        qCard.className = 'card';
+        const lines = state.dryQueue.filter(j => !j.done).map(j => {
+          const left = Math.max(0, Math.ceil((j.duration - (Date.now() - j.startedAt)) / 1000));
+          const s = getStrain(j.strainId);
+          const pct = Math.min(100, Math.floor(((Date.now() - j.startedAt) / j.duration) * 100));
+          return `<div style="font-size:11px;margin:4px 0;">🍂 ${(s&&s.name)||j.strainId} ×${j.qty} — <b>${left}с</b>
+            <div class="bar" style="height:4px;margin-top:2px;"><div class="bar-fill growth" style="width:${pct}%"></div></div></div>`;
+        }).join('');
+        qCard.innerHTML = `<div class="card-emoji">⏳</div><div class="card-info"><div class="card-title">Сушилка</div>${lines}</div>`;
+        list.appendChild(qCard);
+      }
+
       const dried = Object.entries(state.inventory).filter(([k, v]) => v > 0 && k.endsWith('_dried'));
       dried.forEach(([key, amt]) => {
         const info = getProductInfo(key);
@@ -5121,59 +6004,171 @@
       updateBonusTimer();
     }
 
-    function loadChat() {
+    let _chatMode = 'global'; // global | pm
+    let _pmOtherId = null;
+    function setChatMode(mode) {
+      _chatMode = mode === 'pm' ? 'pm' : 'global';
+      const g = document.getElementById('chat-tab-global');
+      const p = document.getElementById('chat-tab-pm');
+      const row = document.getElementById('pm-target-row');
+      if (g) g.className = 'btn btn-small' + (_chatMode === 'global' ? '' : ' btn-secondary');
+      if (p) p.className = 'btn btn-small' + (_chatMode === 'pm' ? '' : ' btn-secondary');
+      if (row) row.style.display = _chatMode === 'pm' ? 'block' : 'none';
+      if (_chatMode === 'global') loadGlobalChat();
+      else {
+        fillPmSelect();
+        loadPrivateChat();
+      }
+    }
+
+    async function loadOnlinePlayers() {
+      const el = document.getElementById('online-list');
       try {
-        const saved = localStorage.getItem('chat_' + userId);
-        if (saved) {
-          chatMessages = JSON.parse(saved);
+        const r = await fetch(SERVER_URL + '/api/online');
+        const data = await r.json();
+        const list = data.online || [];
+        if (!el) return;
+        if (!list.length) {
+          el.innerHTML = '<div style="color:var(--hint);font-size:11px;padding:6px;">Сейчас никого нет онлайн</div>';
+          return;
         }
-      } catch (e) {}
+        el.innerHTML = '<div style="font-size:11px;color:var(--hint);margin-bottom:4px;">🟢 ' + list.length + ' в игре</div>' +
+          list.map(p => {
+            const isMe = String(p.id) === String(userId);
+            return `<div class="friend-item" style="padding:8px 10px;">
+              <span class="online-dot online"></span>
+              <span style="flex:1;font-weight:600;">${p.name}${isMe ? ' (ты)' : ''}</span>
+              <span style="font-size:10px;color:var(--hint);">Lv.${p.level || 1}</span>
+              ${!isMe ? `<button class="btn btn-small btn-secondary" onclick="openPmWith('${p.id}','${(p.name || '').replace(/'/g, '')}')">✉️</button>` : ''}
+            </div>`;
+          }).join('');
+        fillPmSelect(list);
+      } catch (e) {
+        if (el) el.innerHTML = '<div style="color:var(--hint);font-size:11px;">Не удалось загрузить онлайн</div>';
+      }
     }
 
-    function saveChat() {
+    function fillPmSelect(onlineList) {
+      const sel = document.getElementById('pm-select');
+      if (!sel) return;
+      const friends = (_serverFriends || state.friends || []).map(f => ({ id: f.id, name: f.name }));
+      const map = {};
+      friends.forEach(f => { if (f.id) map[f.id] = f.name; });
+      (onlineList || []).forEach(p => { if (p.id && String(p.id) !== String(userId)) map[p.id] = p.name; });
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">— выбери игрока —</option>' +
+        Object.keys(map).map(id => `<option value="${id}">${map[id]}</option>`).join('');
+      if (cur) sel.value = cur;
+    }
+
+    function openPmWith(id, name) {
+      setChatMode('pm');
+      const sel = document.getElementById('pm-select');
+      if (sel) {
+        if (![...sel.options].some(o => o.value === id)) {
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = name || id;
+          sel.appendChild(opt);
+        }
+        sel.value = id;
+      }
+      _pmOtherId = id;
+      loadPrivateChat();
+    }
+
+    async function loadGlobalChat() {
       try {
-        localStorage.setItem('chat_' + userId, JSON.stringify(chatMessages));
-      } catch (e) {}
+        const r = await fetch(SERVER_URL + '/api/chat/global');
+        const data = await r.json();
+        chatMessages = data.messages || [];
+        renderChat();
+      } catch (e) {
+        chatMessages = [];
+        renderChat();
+      }
     }
 
-    function sendChatMessage() {
+    async function loadPrivateChat() {
+      const sel = document.getElementById('pm-select');
+      const otherId = (sel && sel.value) || _pmOtherId;
+      _pmOtherId = otherId;
+      if (!otherId) {
+        chatMessages = [];
+        renderChat();
+        return;
+      }
+      try {
+        const r = await fetch(SERVER_URL + '/api/chat/pm/' + encodeURIComponent(userId) + '/' + encodeURIComponent(otherId));
+        const data = await r.json();
+        chatMessages = data.messages || [];
+        renderChat();
+      } catch (e) {
+        chatMessages = [];
+        renderChat();
+      }
+    }
+
+    async function sendChatMessage() {
       const input = document.getElementById('chatInput');
-      const text = input.value.trim();
+      const text = (input && input.value || '').trim();
       if (!text) return;
-      const msg = {
-        from: userId,
-        name: getUserName(),
-        text: text,
-        time: new Date().toISOString()
-      };
-      chatMessages.push(msg);
-      saveChat();
-      input.value = '';
-      renderChat();
-      if (tg) {
-        try {
-          tg.sendData(JSON.stringify({ type: 'chat', message: msg }));
-        } catch (e) {}
+      if (!state.registered) {
+        showToast('Сначала зарегистрируйся в рейтинге', true);
+        return;
+      }
+      try {
+        if (_chatMode === 'pm') {
+          const toId = (document.getElementById('pm-select') || {}).value || _pmOtherId;
+          if (!toId) { showToast('Выбери, кому писать', true); return; }
+          const r = await fetch(SERVER_URL + '/api/chat/pm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromId: userId, toId: toId, text })
+          });
+          const data = await r.json();
+          if (!data.success) { showToast(data.error || 'Ошибка', true); return; }
+          if (input) input.value = '';
+          loadPrivateChat();
+        } else {
+          const r = await fetch(SERVER_URL + '/api/chat/global', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userId, text })
+          });
+          const data = await r.json();
+          if (!data.success) { showToast(data.error || 'Ошибка', true); return; }
+          if (input) input.value = '';
+          loadGlobalChat();
+        }
+      } catch (e) {
+        showToast('❌ Сервер недоступен', true);
       }
     }
 
     function renderChat() {
       const el = document.getElementById('chatWindow');
       if (!el) return;
-      const msgs = chatMessages.slice(-20);
+      const msgs = chatMessages.slice(-40);
       if (msgs.length === 0) {
-        el.innerHTML = `<div class="chat-message"><span class="sender">💬</span><div>Нет сообщений</div></div>`;
+        el.innerHTML = '<div class="chat-message" style="color:var(--hint);font-size:12px;">' +
+          (_chatMode === 'pm' ? 'Нет сообщений. Напиши первым.' : 'Пока тихо. Напиши первым!') + '</div>';
         return;
       }
-      el.innerHTML = msgs.map(msg => `
-            <div class="chat-message">
-                <span class="sender">${msg.from === userId ? '👤' : ''} ${msg.name}</span>
-                <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>
-                <div>${msg.text}</div>
-            </div>
-        `).join('');
+      el.innerHTML = msgs.map(msg => {
+        const mine = String(msg.from) === String(userId);
+        const t = msg.time ? new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        return `<div class="chat-message" style="margin-bottom:8px;${mine ? 'text-align:right;' : ''}">
+          <span class="sender" style="font-size:11px;font-weight:700;color:${mine ? 'var(--accent)' : 'var(--gold)'};">${mine ? 'Ты' : (msg.name || 'Игрок')}</span>
+          <span class="time" style="font-size:9px;color:var(--hint);margin-left:6px;">${t}</span>
+          <div style="font-size:13px;margin-top:2px;">${String(msg.text || '').replace(/</g, '&lt;')}</div>
+        </div>`;
+      }).join('');
       el.scrollTop = el.scrollHeight;
     }
+
+    function loadChat() { loadGlobalChat(); loadOnlinePlayers(); }
+
 
     // ============================================================
     // ====== РЕФЕРАЛЫ ======
@@ -5620,6 +6615,9 @@
           updateBonusTimer();
           loadReferralStats();
           loadFriendsFromServer();
+          loadOnlinePlayers();
+          if (_chatMode === 'pm') loadPrivateChat();
+          else loadGlobalChat();
         }
         haptic('light');
       });
@@ -5630,6 +6628,7 @@
         state.energy = Math.min(state.maxEnergy, state.energy + 0.3);
       }
       tickPots();
+      tickDryQueue();
       checkPests();
       updateMarketPrices();
       trySpawnSnoop();
@@ -5668,7 +6667,13 @@
     // Онлайн-статус друзей
     setInterval(() => {
       if (state.registered) loadFriendsFromServer();
-    }, 30000);
+      const friendsTab = document.querySelector('.tab[data-tab="friends"].active');
+      if (friendsTab) {
+        loadOnlinePlayers();
+        if (typeof _chatMode !== 'undefined' && _chatMode === 'pm') loadPrivateChat();
+        else if (typeof loadGlobalChat === 'function') loadGlobalChat();
+      }
+    }, 15000);
 
     load();
     console.log('Fermarast ' + APP_VERSION);
@@ -5694,7 +6699,16 @@
     }, 1500);
     updateRegisterBanner();
     checkAdminSession();
-    if (state.musicOn) setTimeout(() => { try { startReggae(); } catch(e) {} }, 800);
+    if (state.musicOn) setTimeout(() => {
+      try {
+        const m = state.musicMode || 1;
+        stopAllMusic();
+        if (m === 1) startReggae();
+        else if (m === 2) startAmbient();
+        else startReggae();
+        updateMusicBtn();
+      } catch(e) {}
+    }, 900);
     // Secret: 5 taps on XP badge
     const xpBadge = document.getElementById('xp-badge');
     if (xpBadge) xpBadge.addEventListener('click', onAdminSecretTap);
@@ -5719,6 +6733,8 @@
     window.openBribeModal = openBribeModal;
     window.payProactiveBribe = payProactiveBribe;
     window.toggleReggae = toggleReggae;
+    window.cycleMusic = cycleMusic;
+    window.startAmbient = startAmbient;
     window.selectSellBuyer = selectSellBuyer;
     window.buyRoomUpgrade = buyRoomUpgrade;
     window.sellAll = sellAll;
@@ -5734,6 +6750,11 @@
     window.loadReferralStats = loadReferralStats;
     window.claimReferralCommission = claimReferralCommission;
     window.loadFriendsFromServer = loadFriendsFromServer;
+    window.setChatMode = setChatMode;
+    window.loadOnlinePlayers = loadOnlinePlayers;
+    window.openPmWith = openPmWith;
+    window.loadGlobalChat = loadGlobalChat;
+    window.loadPrivateChat = loadPrivateChat;
     window.copyReferral = copyReferral;
     window.loadLeaderboardFromServer = loadLeaderboardFromServer;
     window.registerProfileOnServer = registerProfileOnServer;
