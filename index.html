@@ -1588,6 +1588,121 @@
     }
 
 
+  
+    /* Bottom navigation — крупные иконки */
+    .tabs {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      z-index: 300 !important;
+      background: rgba(12, 18, 14, 0.96) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-top: 1px solid rgba(160, 180, 140, 0.25) !important;
+      border-bottom: none !important;
+      padding: 10px 6px calc(10px + env(safe-area-inset-bottom)) !important;
+      box-shadow: 0 -10px 32px rgba(0,0,0,0.45) !important;
+      gap: 4px !important;
+      min-height: 64px !important;
+      align-items: center !important;
+    }
+    .content {
+      padding-bottom: 100px !important;
+    }
+    .tab {
+      position: relative;
+      font-size: 26px !important;
+      line-height: 1.1 !important;
+      padding: 10px 12px !important;
+      min-width: 48px !important;
+      min-height: 48px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 14px !important;
+    }
+    .tab.active {
+      font-size: 28px !important;
+      transform: scale(1.05);
+    }
+    .tab-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #e53935;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 2px 6px rgba(229,57,53,0.5);
+    }
+    .tab-badge.show { display: block; }
+
+    /* Seed modal — сверху, перед глазами */
+    #modal-seed.modal-overlay {
+      align-items: flex-start !important;
+      padding-top: 12px !important;
+      z-index: 600 !important;
+    }
+    #modal-seed .modal {
+      max-height: 85vh !important;
+      margin-top: 8px;
+      border-radius: 16px !important;
+    }
+
+    /* Profile card v2 */
+    .profile-hero {
+      border-radius: 22px;
+      padding: 20px 16px 16px;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(110, 207, 122, 0.25), transparent 55%),
+        linear-gradient(160deg, #1a2e24 0%, #0f1814 50%, #15201a 100%);
+      border: 1px solid rgba(140, 200, 150, 0.22);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      margin-bottom: 12px;
+    }
+    .profile-avatar {
+      width: 72px; height: 72px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3d6b45, #1e3a28);
+      border: 3px solid rgba(140, 220, 150, 0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .profile-name {
+      font-size: 20px; font-weight: 800; letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+    .profile-id-line {
+      font-size: 11px; color: var(--hint); margin-bottom: 14px;
+    }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      text-align: left;
+    }
+    .profile-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(160,180,140,0.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    .profile-chip .k { font-size: 10px; color: var(--hint); margin-bottom: 2px; }
+    .profile-chip .v { font-size: 14px; font-weight: 700; color: var(--text); }
+    .profile-chip.wide { grid-column: 1 / -1; }
+
   </style>
 </head>
 <body>
@@ -1757,16 +1872,17 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-tab="farm">🌱 Ферма</div>
-    <div class="tab" data-tab="market">📈 Рынок</div>
-    <div class="tab" data-tab="shop">🛒 Шоп</div>
-    <div class="tab" data-tab="inventory">📦 Склад</div>
-    <div class="tab" data-tab="process">🧪 Цех</div>
-    <div class="tab" data-tab="room">🏡 Дом</div>
-    <div class="tab" data-tab="profile">👤 Я</div>
-    <div class="tab" data-tab="leaderboard">🏅 Топ</div>
-    <div class="tab" data-tab="friends">🤝 Сеть</div>
-    <div class="tab" data-tab="admin" id="admin-tab" style="display:none;">🛠 Админ</div>
+    <div class="tab active" data-tab="farm">🌱</div>
+    <div class="tab" data-tab="market">📈</div>
+    <div class="tab" data-tab="shop">🛒</div>
+    <div class="tab" data-tab="inventory">📦</div>
+    <div class="tab" data-tab="process">🧪</div>
+    <div class="tab" data-tab="room">🏡</div>
+    <div class="tab" data-tab="profile">👤</div>
+    <div class="tab" data-tab="leaderboard">🏅</div>
+    <div class="tab" data-tab="friends">🤝</div>
+    <div class="tab" data-tab="chat" id="tab-chat">💬<span class="tab-badge" id="chat-badge">0</span></div>
+    <div class="tab" data-tab="admin" id="admin-tab" style="display:none;">🛠</div>
   </div>
 
   <div class="content">
@@ -1815,24 +1931,24 @@
       <div class="card-list" id="room-list"></div>
     </div>
 
-    <div class="section" id="section-profile">
-      <div class="profile-card" style="background:linear-gradient(145deg,#1e3a8a,#312e81 60%,#1e1b4b);border-radius:18px;padding:16px;text-align:center;border:1px solid rgba(165,180,252,0.25);box-shadow:0 8px 28px rgba(30,58,138,0.35)">
-        <div style="font-size:40px;margin-bottom:2px;">👤</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:2px;" id="profile-name">Игрок</div>
-        <div style="font-size:10px;color:var(--hint);margin-bottom:6px;" id="profile-id">ID: загрузка...</div>
-        <div class="profile-stat" style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px"><span class="label">📅 Регистрация</span><span class="value" id="profile-regdate">--</span></div>
-        <div class="profile-stat"><span class="label">🏆 Уровень</span><span class="value" id="profile-level">1</span></div>
-        <div class="profile-stat"><span class="label">💰 Денег</span><span class="value" id="profile-money">0$</span></div>
-        <div class="profile-stat"><span class="label">⚡ Энергии</span><span class="value" id="profile-energy">100</span></div>
-        <div class="profile-stat"><span class="label">🌿 Собрано</span><span class="value" id="profile-harvests">0</span></div>
-        <div class="profile-stat"><span class="label">🪴 Горшков</span><span class="value" id="profile-pots">0</span></div>
-        <div class="profile-stat"><span class="label">🌀 Состояние</span><span class="value" id="profile-state">🧠 Норма</span></div>
-        <div class="profile-stat"><span class="label">👮 Палево</span><span class="value" id="profile-heat">0%</span></div>
-        <div class="profile-stat"><span class="label">🕐 Время</span><span class="value" id="profile-time">12:00 ☀️</span></div>
-        <div class="profile-stat"><span class="label">📊 На сервере</span><span class="value" id="profile-registered">❌ Нет</span></div>
+        <div class="section" id="section-profile">
+      <div class="profile-hero">
+        <div class="profile-avatar">🧑‍🌾</div>
+        <div class="profile-name" id="profile-name">Игрок</div>
+        <div class="profile-id-line" id="profile-id">ID: —</div>
+        <div class="profile-grid">
+          <div class="profile-chip"><div class="k">🏆 Уровень</div><div class="v" id="profile-level">1</div></div>
+          <div class="profile-chip"><div class="k">💰 Деньги</div><div class="v" id="profile-money">0$</div></div>
+          <div class="profile-chip"><div class="k">⚡ Энергия</div><div class="v" id="profile-energy">100</div></div>
+          <div class="profile-chip"><div class="k">🌿 Собрано</div><div class="v" id="profile-harvests">0</div></div>
+          <div class="profile-chip"><div class="k">🪴 Горшков</div><div class="v" id="profile-pots">0</div></div>
+          <div class="profile-chip"><div class="k">👮 Палево</div><div class="v" id="profile-heat">0%</div></div>
+          <div class="profile-chip"><div class="k">🌀 Состояние</div><div class="v" id="profile-state">🧠 Норма</div></div>
+          <div class="profile-chip"><div class="k">🕐 Время</div><div class="v" id="profile-time">12:00</div></div>
+          <div class="profile-chip wide"><div class="k">📅 Регистрация · сервер</div><div class="v"><span id="profile-regdate">—</span> · <span id="profile-registered">❌</span></div></div>
+        </div>
       </div>
     </div>
-
     <div class="section" id="section-leaderboard">
       <div id="my-rating-card" style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;padding:14px;margin-bottom:10px;text-align:center;">
         <div style="font-size:11px;color:rgba(255,255,255,0.7);">🏆 Твой рейтинг (RG)</div>
@@ -1900,27 +2016,30 @@
         <div id="online-list" style="margin-bottom:10px;font-size:12px;">
           <div class="empty" style="padding:12px;">Загрузка...</div>
         </div>
+      </div>
+    </div>
 
-        <div class="section-title">💬 Чат</div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <button class="btn btn-small" id="chat-tab-global" onclick="setChatMode('global')" style="flex:1;">🌐 Общий</button>
-          <button class="btn btn-small btn-secondary" id="chat-tab-pm" onclick="setChatMode('pm')" style="flex:1;">✉️ Личный</button>
-        </div>
-        <div id="pm-target-row" style="display:none;margin-bottom:6px;">
-          <select id="pm-select" class="social-input" style="width:100%;" onchange="loadPrivateChat()">
-            <option value="">— выбери игрока —</option>
-          </select>
-        </div>
-        <div class="chat-window" id="chatWindow" style="min-height:140px;max-height:220px;overflow-y:auto;background:rgba(0,0,0,0.2);border-radius:12px;padding:8px;border:1px solid rgba(160,180,140,0.15);">
-          <div class="chat-message">
-            <span class="sender">🤖 Система</span>
-            <div>Общий чат сервера. Будь вежлив.</div>
-          </div>
-        </div>
-        <div class="chat-input-row" style="display:flex;gap:6px;margin-top:6px;">
-          <input class="chat-input social-input" id="chatInput" placeholder="💬 Сообщение..." style="flex:1;" onkeydown="if(event.key==='Enter')sendChatMessage()">
-          <button class="btn btn-small" onclick="sendChatMessage()">📤</button>
-        </div>
+    <div class="section" id="section-chat">
+      <div class="section-title">💬 Чаты</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn btn-small" id="chat-tab-global" onclick="setChatMode('global')" style="flex:1;">🌐 Общий</button>
+        <button class="btn btn-small btn-secondary" id="chat-tab-pm" onclick="setChatMode('pm')" style="flex:1;">✉️ Личный</button>
+      </div>
+      <div id="pm-target-row" style="display:none;margin-bottom:6px;">
+        <select id="pm-select" class="social-input" style="width:100%;" onchange="loadPrivateChat()">
+          <option value="">— выбери игрока —</option>
+        </select>
+      </div>
+      <div class="chat-window" id="chatWindow" style="min-height:200px;max-height:50vh;overflow-y:auto;background:rgba(0,0,0,0.25);border-radius:14px;padding:10px;border:1px solid rgba(160,180,140,0.15);">
+        <div class="chat-message"><span class="sender">🤖 Система</span><div>Общий чат. Будь вежлив.</div></div>
+      </div>
+      <div class="chat-input-row" style="display:flex;gap:6px;margin-top:8px;">
+        <input class="chat-input social-input" id="chatInput" placeholder="💬 Сообщение..." style="flex:1;" onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="btn btn-small" onclick="sendChatMessage()">📤</button>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="section-title">🟢 Кто онлайн</div>
+        <div id="online-list-chat" style="font-size:12px;"></div>
       </div>
     </div>
   </div>
@@ -2033,7 +2152,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.5-ref · 04.10';
+    const APP_VERSION = 'v5.6.1-tabs · 04.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -2155,13 +2274,14 @@
     ];
 
     const PRODUCTS = {
-      // drySec — секунд на 1 ед. сушки (пачка чуть быстрее за счёт объёма)
       dried: { name: 'Сушка', emoji: '🍂', mult: 1.4, energy: 2, from: 'raw', need: 1, drySec: 45 },
-      joint: { name: 'Косяк', emoji: '🚬', mult: 1.9, energy: 5, from: 'dried', need: 1 },
-      oil: { name: 'Масло', emoji: '🧴', mult: 2.4, energy: 8, from: 'dried', need: 2 },
-      edible: { name: 'Еда', emoji: '🍪', mult: 2.8, energy: 10, from: 'dried', need: 3 }
+      // craftSec — секунд на 1 шт готового продукта
+      joint: { name: 'Косяк', emoji: '🚬', mult: 1.9, energy: 5, from: 'dried', need: 1, craftSec: 180 },
+      oil: { name: 'Масло', emoji: '🧴', mult: 2.4, energy: 8, from: 'dried', need: 2, craftSec: 600 },
+      edible: { name: 'Еда', emoji: '🍪', mult: 2.8, energy: 10, from: 'dried', need: 3, craftSec: 900 }
     };
-    const DRY_MAX_SLOTS = 4; // одновременных партий на сушилке
+    const DRY_MAX_SLOTS = 4;
+    const CRAFT_MAX_SLOTS = 4;
 
     const STAGE_NAMES = ['', '🌱 Пророст', '🌿 Рассада', '🌳 Вегетация', '🌸 Цветение', '✨ Готово к сбору'];
     const STAGE_EMOJI = ['', '🌱', '🌿', '🌳', '🌸', '✨'];
@@ -4412,24 +4532,39 @@
 
 
     function tickDryQueue() {
-      if (!state.dryQueue || !state.dryQueue.length) return;
       const now = Date.now();
       let changed = false;
-      state.dryQueue.forEach(job => {
-        if (job.done) return;
-        if (now - job.startedAt >= job.duration) {
-          job.done = true;
-          const driedKey = job.strainId + '_dried';
-          state.inventory[driedKey] = (state.inventory[driedKey] || 0) + job.qty;
-          const s = getStrain(job.strainId);
-          showToast('🍂 Готово: сушка ' + (s ? s.name : '') + ' ×' + job.qty);
-          haptic('success');
-          changed = true;
-        }
-      });
-      // чистим старые done
-      state.dryQueue = state.dryQueue.filter(j => !j.done || (now - j.startedAt < j.duration + 60000));
-      state.dryQueue = state.dryQueue.filter(j => !j.done);
+      if (state.dryQueue && state.dryQueue.length) {
+        state.dryQueue.forEach(job => {
+          if (job.done) return;
+          if (now - job.startedAt >= job.duration) {
+            job.done = true;
+            const driedKey = job.strainId + '_dried';
+            state.inventory[driedKey] = (state.inventory[driedKey] || 0) + job.qty;
+            const s = getStrain(job.strainId);
+            showToast('🍂 Готово: сушка ' + (s ? s.name : '') + ' ×' + job.qty);
+            haptic('success');
+            changed = true;
+          }
+        });
+        state.dryQueue = state.dryQueue.filter(j => !j.done);
+      }
+      if (state.craftQueue && state.craftQueue.length) {
+        state.craftQueue.forEach(job => {
+          if (job.done) return;
+          if (now - job.startedAt >= job.duration) {
+            job.done = true;
+            const outKey = job.strainId + '_' + job.productType;
+            state.inventory[outKey] = (state.inventory[outKey] || 0) + job.qty;
+            const p = PRODUCTS[job.productType];
+            const s = getStrain(job.strainId);
+            showToast((p ? p.emoji : '✅') + ' Готово: ' + (p ? p.name : '') + ' ' + (s ? s.name : '') + ' ×' + job.qty);
+            haptic('success');
+            changed = true;
+          }
+        });
+        state.craftQueue = state.craftQueue.filter(j => !j.done);
+      }
       if (changed) {
         save();
         if (typeof renderProcess === 'function') renderProcess();
@@ -4486,22 +4621,43 @@
         addHeat(0.25 * qty);
         showToast('🍂 На сушке ×' + qty + ' (~' + Math.ceil(sec) + ' сек)');
       } else {
+        if (!state.craftQueue) state.craftQueue = [];
+        const activeC = state.craftQueue.filter(j => !j.done).length;
+        if (activeC >= CRAFT_MAX_SLOTS) {
+          showToast('Цех занят (макс ' + CRAFT_MAX_SLOTS + ' партии)', true);
+          return;
+        }
         const need = (p.need || 1) * qty;
         if ((state.inventory[driedKey] || 0) < need) {
           showToast('Нужна сушка ×' + need, true);
           return;
         }
-        const energyCost = p.energy * qty;
+        let energyCost = p.energy * qty;
+        if (qty >= 10) energyCost = Math.ceil(energyCost * 0.85);
+        else if (qty >= 5) energyCost = Math.ceil(energyCost * 0.9);
         if (Math.floor(state.energy) < energyCost) {
           showToast('Мало энергии (нужно ' + energyCost + '⚡)', true);
           return;
         }
+        let sec = (p.craftSec || 180) * qty;
+        if (qty >= 10) sec *= 0.9;
+        else if (qty >= 5) sec *= 0.95;
+
         state.inventory[driedKey] -= need;
         if (state.inventory[driedKey] <= 0) delete state.inventory[driedKey];
         state.energy = Math.floor(state.energy) - energyCost;
-        state.inventory[outKey] = (state.inventory[outKey] || 0) + qty;
-        addHeat(need * 0.4);
-        showToast(p.emoji + ' ' + p.name + ' ×' + qty);
+        state.craftQueue.push({
+          id: 'craft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          strainId: strainId,
+          productType: productType,
+          qty: qty,
+          startedAt: Date.now(),
+          duration: Math.max(30, Math.floor(sec)) * 1000,
+          done: false
+        });
+        addHeat(need * 0.25);
+        const mins = Math.ceil(sec / 60);
+        showToast(p.emoji + ' ' + p.name + ' ×' + qty + ' в работе (~' + mins + ' мин)');
       }
       haptic('success');
       addXp(2 + qty);
@@ -5785,7 +5941,21 @@
           list.appendChild(c);
         });
       }
-      // Очередь сушки
+      // Очередь цеха (сушка + переработка)
+      if (state.craftQueue && state.craftQueue.some(j => !j.done)) {
+        const qCard = document.createElement('div');
+        qCard.className = 'card';
+        const lines = state.craftQueue.filter(j => !j.done).map(j => {
+          const left = Math.max(0, Math.ceil((j.duration - (Date.now() - j.startedAt)) / 1000));
+          const p = PRODUCTS[j.productType];
+          const s = getStrain(j.strainId);
+          const pct = Math.min(100, Math.floor(((Date.now() - j.startedAt) / j.duration) * 100));
+          return `<div style="font-size:11px;margin:4px 0;">${(p&&p.emoji)||'⏳'} ${(p&&p.name)||''} ${(s&&s.name)||''} ×${j.qty} — <b>${left > 60 ? Math.ceil(left/60)+'м' : left+'с'}</b>
+            <div class="bar" style="height:4px;margin-top:2px;"><div class="bar-fill growth" style="width:${pct}%"></div></div></div>`;
+        }).join('');
+        qCard.innerHTML = `<div class="card-emoji">⚙️</div><div class="card-info"><div class="card-title">В работе</div>${lines}</div>`;
+        list.appendChild(qCard);
+      }
       if (state.dryQueue && state.dryQueue.some(j => !j.done)) {
         const qCard = document.createElement('div');
         qCard.className = 'card';
@@ -5813,10 +5983,23 @@
                   <div class="card-title">${info.name} <span class="inv-count">×${amt}</span></div>
                   <div class="card-desc">Переработка</div>
               </div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                  <button class="btn btn-small" onclick="processItem('${sid}','joint')">🚬 Косяк</button>
-                  <button class="btn btn-small" onclick="processItem('${sid}','oil')">🧴 Масло</button>
-                  <button class="btn btn-small" onclick="processItem('${sid}','edible')">🍪 Еда</button>
+              <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
+                  <div style="font-size:9px;color:var(--hint);">🚬 Косяк 3м · 🧴 Масло 10м · 🍪 Еда 15м</div>
+                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                    <button class="btn btn-small" onclick="processItem('${sid}','joint',1)">🚬×1</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','joint',5)" ${amt < 5 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','joint',10)" ${amt < 10 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
+                  </div>
+                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                    <button class="btn btn-small" onclick="processItem('${sid}','oil',1)">🧴×1</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','oil',5)" ${amt < 10 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','oil',10)" ${amt < 20 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
+                  </div>
+                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                    <button class="btn btn-small" onclick="processItem('${sid}','edible',1)">🍪×1</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','edible',5)" ${amt < 15 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
+                    <button class="btn btn-small" onclick="processItem('${sid}','edible',10)" ${amt < 30 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
+                  </div>
               </div>
           `;
         list.appendChild(c);
@@ -6256,6 +6439,25 @@
 
     let _chatMode = 'global'; // global | pm
     let _pmOtherId = null;
+    
+    let _chatUnread = 0;
+    let _lastChatSeen = 0;
+    function setChatBadge(n) {
+      _chatUnread = Math.max(0, n);
+      const b = document.getElementById('chat-badge');
+      if (!b) return;
+      if (_chatUnread > 0) {
+        b.textContent = _chatUnread > 9 ? '9+' : String(_chatUnread);
+        b.classList.add('show');
+      } else {
+        b.classList.remove('show');
+      }
+    }
+    function clearChatBadge() {
+      setChatBadge(0);
+      _lastChatSeen = Date.now();
+    }
+
     function setChatMode(mode) {
       _chatMode = mode === 'pm' ? 'pm' : 'global';
       const g = document.getElementById('chat-tab-global');
@@ -6331,7 +6533,16 @@
       try {
         const r = await fetch(SERVER_URL + '/api/chat/global');
         const data = await r.json();
-        chatMessages = data.messages || [];
+        const msgs = data.messages || [];
+        const activeChat = document.querySelector('.tab[data-tab="chat"].active');
+        if (!activeChat && msgs.length) {
+          const newest = Math.max.apply(null, msgs.map(m => m.time || 0).concat([0]));
+          if (newest > (_lastChatSeen || 0)) {
+            const unread = msgs.filter(m => (m.time || 0) > (_lastChatSeen || 0) && String(m.from) !== String(userId)).length;
+            if (unread > 0) setChatBadge((_chatUnread || 0) + unread > 0 ? unread : 1);
+          }
+        }
+        chatMessages = msgs;
         renderChat();
       } catch (e) {
         chatMessages = [];
@@ -6883,8 +7094,15 @@
           loadReferralStats();
           loadFriendsFromServer();
           loadOnlinePlayers();
-          if (_chatMode === 'pm') loadPrivateChat();
+        }
+        if (tabName === 'chat') {
+          clearChatBadge();
+          loadOnlinePlayers();
+          if (typeof _chatMode !== 'undefined' && _chatMode === 'pm') loadPrivateChat();
           else loadGlobalChat();
+          const oc = document.getElementById('online-list-chat');
+          const ol = document.getElementById('online-list');
+          if (oc && ol) oc.innerHTML = ol.innerHTML;
         }
         haptic('light');
       });
