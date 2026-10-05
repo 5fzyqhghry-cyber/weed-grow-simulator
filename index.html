@@ -1703,6 +1703,80 @@
     .profile-chip .v { font-size: 14px; font-weight: 700; color: var(--text); }
     .profile-chip.wide { grid-column: 1 / -1; }
 
+  
+    /* === v5.7 modernize === */
+    .farm-hint {
+      background: linear-gradient(135deg, rgba(110,207,122,0.15), rgba(30,50,35,0.5));
+      border: 1px solid rgba(140,220,150,0.35);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: hintPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes hintPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(110,207,122,0.2); }
+      50% { box-shadow: 0 0 12px 2px rgba(110,207,122,0.25); }
+    }
+    .quest-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(160,180,140,0.15);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .quest-card.done { opacity: 0.55; border-color: rgba(110,207,122,0.4); }
+    .quest-bar {
+      height: 4px; background: rgba(0,0,0,0.3); border-radius: 2px; margin-top: 6px; overflow: hidden;
+    }
+    .quest-bar > div { height: 100%; background: linear-gradient(90deg,#6ecf7a,#c6ff6e); }
+    .event-banner {
+      background: linear-gradient(90deg, rgba(255,193,7,0.2), rgba(156,39,176,0.2));
+      border: 1px solid rgba(255,215,0,0.35);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .tutorial-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,0.72);
+      display: none; align-items: flex-end; justify-content: center;
+      padding: 16px; padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+    .tutorial-overlay.show { display: flex; }
+    .tutorial-box {
+      background: linear-gradient(180deg,#1e2a22,#121a14);
+      border: 1px solid rgba(140,200,150,0.35);
+      border-radius: 18px;
+      padding: 18px 16px;
+      max-width: 400px; width: 100%;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .pot.anim-water { animation: splash 0.45s ease; }
+    .pot.anim-harvest { animation: popHarvest 0.5s ease; }
+    @keyframes splash {
+      0% { filter: brightness(1); }
+      40% { filter: brightness(1.3) drop-shadow(0 0 8px #4fc3f7); }
+      100% { filter: brightness(1); }
+    }
+    @keyframes popHarvest {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    .feed-item {
+      font-size: 11px; padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--hint);
+    }
+    .feed-item b { color: var(--text); }
+
   </style>
 </head>
 <body>
@@ -1890,12 +1964,16 @@
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
+      <div id="event-banner" class="event-banner" style="display:none;"></div>
+      <div id="farm-hint" class="farm-hint" style="display:none;"></div>
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        <button class="btn btn-small btn-blue" onclick="waterAllPots()">💧 Полить всё</button>
         <button class="btn btn-small btn-purple" onclick="openCrossModal()">🧬 Скрестить</button>
         <button class="btn btn-small btn-gold" onclick="openAchievementsModal()">🏆 Достижения</button>
         <button class="btn btn-small btn-pink" onclick="openInvestModal()">📈 Инвестиции</button>
         <button class="btn btn-small btn-police" onclick="openBribeModal()" id="btn-bribe">💵 Взятка</button>
       </div>
+      <div id="quests-panel" style="margin-bottom:8px;"></div>
       <div class="farm-grid" id="farm-grid"></div>
       <div style="margin-top:8px;text-align:center">
         <button class="btn btn-secondary btn-full" id="btn-buy-pot" onclick="buyPot()">➕ Купить горшок</button>
@@ -1948,6 +2026,20 @@
           <div class="profile-chip wide"><div class="k">📅 Регистрация · сервер</div><div class="v"><span id="profile-regdate">—</span> · <span id="profile-registered">❌</span></div></div>
         </div>
       </div>
+      <div class="section-title" style="margin-top:12px;">📅 Недельная цель</div>
+      <div id="weekly-goal-box" class="quest-card"></div>
+      <div class="section-title">🏠 Кланы / теплица</div>
+      <div id="clan-box" class="quest-card">
+        <div style="margin-bottom:6px;">Общий бонус роста для участников</div>
+        <input class="social-input" id="clan-name-input" placeholder="Название теплицы..." style="width:100%;margin-bottom:6px;">
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-small" style="flex:1;" onclick="createClan()">Создать</button>
+          <button class="btn btn-small btn-secondary" style="flex:1;" onclick="joinClan()">Войти</button>
+        </div>
+        <div id="clan-status" style="margin-top:8px;font-size:11px;color:var(--hint);"></div>
+      </div>
+      <div class="section-title">📰 Лента</div>
+      <div id="activity-feed" style="max-height:160px;overflow-y:auto;"></div>
     </div>
     <div class="section" id="section-leaderboard">
       <div id="my-rating-card" style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;padding:14px;margin-bottom:10px;text-align:center;">
@@ -2152,7 +2244,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.6.1-tabs · 04.10';
+    const APP_VERSION = 'v5.8-balance · 05.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -2204,37 +2296,37 @@
     // ====== ДАННЫЕ ======
     // ============================================================
     const STRAINS = [
-      // baseTime: 3 мин, 4 мин, 5 мин... по порядку открытия
-      { id: 'skunk', emoji: '🦨', name: 'Skunk', seedPrice: 50, baseTime: 180, yield: 2, sellPrice: 45, energyCost: 5,
+      // Баланс v5.8: прибыль есть, но без «лям за ночь». yield урезан на поздних сортах.
+      { id: 'skunk', emoji: '🦨', name: 'Skunk', seedPrice: 40, baseTime: 210, yield: 2, sellPrice: 55, energyCost: 6,
         unlock: 1, quality: 1.0 },
-      { id: 'haze', emoji: '💜', name: 'Purple Haze', seedPrice: 130, baseTime: 240, yield: 3, sellPrice: 75, energyCost: 8,
-        unlock: 3, quality: 1.2 },
-      { id: 'lemon', emoji: '🍋', name: 'Lemon Haze', seedPrice: 350, baseTime: 300, yield: 4, sellPrice: 140, energyCost: 14,
+      { id: 'haze', emoji: '💜', name: 'Purple Haze', seedPrice: 100, baseTime: 270, yield: 2, sellPrice: 90, energyCost: 9,
+        unlock: 3, quality: 1.15 },
+      { id: 'lemon', emoji: '🍋', name: 'Lemon Haze', seedPrice: 180, baseTime: 330, yield: 3, sellPrice: 110, energyCost: 12,
         unlock: 4, quality: 1.2 },
-      { id: 'widow', emoji: '⚪', name: 'White Widow', seedPrice: 280, baseTime: 360, yield: 4, sellPrice: 120, energyCost: 12,
-        unlock: 5, quality: 1.4 },
-      { id: 'cheese', emoji: '🧀', name: 'UK Cheese', seedPrice: 400, baseTime: 420, yield: 5, sellPrice: 155, energyCost: 15,
-        unlock: 6, quality: 1.3 },
-      { id: 'blue', emoji: '💎', name: 'Blue Dream', seedPrice: 600, baseTime: 480, yield: 7, sellPrice: 210, energyCost: 20,
-        unlock: 7, quality: 1.5 },
-      { id: 'alien', emoji: '👽', name: 'Alien Kush', seedPrice: 550, baseTime: 540, yield: 6, sellPrice: 190, energyCost: 18,
-        unlock: 8, quality: 1.6 },
-      { id: 'cookies', emoji: '🍪', name: 'Girl Scout Cookies', seedPrice: 750, baseTime: 600, yield: 8, sellPrice: 250, energyCost: 22,
-        unlock: 9, quality: 1.7 },
-      { id: 'og', emoji: '🔥', name: 'OG Kush', seedPrice: 950, baseTime: 660, yield: 9, sellPrice: 290, energyCost: 25,
-        unlock: 10, quality: 1.8 },
-      { id: 'gelato', emoji: '🍦', name: 'Gelato', seedPrice: 900, baseTime: 720, yield: 10, sellPrice: 320, energyCost: 28,
-        unlock: 12, quality: 1.9 },
-      { id: 'wedding', emoji: '🎂', name: 'Wedding Cake', seedPrice: 1100, baseTime: 780, yield: 11, sellPrice: 360, energyCost: 30,
-        unlock: 15, quality: 2.0 },
-      { id: 'runtz', emoji: '🍬', name: 'Runtz', seedPrice: 1300, baseTime: 840, yield: 12, sellPrice: 400, energyCost: 32,
-        unlock: 18, quality: 2.1 },
-      { id: 'zkittlez', emoji: '🌈', name: 'Zkittlez', seedPrice: 1500, baseTime: 900, yield: 14, sellPrice: 440, energyCost: 35,
-        unlock: 20, quality: 2.2 },
-      { id: 'kush', emoji: '👑', name: 'Master Kush', seedPrice: 1800, baseTime: 960, yield: 16, sellPrice: 500, energyCost: 38,
-        unlock: 25, quality: 2.4 },
-      { id: 'glue', emoji: '🦍', name: 'Gorilla Glue', seedPrice: 2200, baseTime: 1020, yield: 18, sellPrice: 560, energyCost: 40,
-        unlock: 30, quality: 2.5 }
+      { id: 'widow', emoji: '⚪', name: 'White Widow', seedPrice: 260, baseTime: 390, yield: 3, sellPrice: 145, energyCost: 14,
+        unlock: 5, quality: 1.3 },
+      { id: 'cheese', emoji: '🧀', name: 'UK Cheese', seedPrice: 340, baseTime: 450, yield: 3, sellPrice: 170, energyCost: 16,
+        unlock: 6, quality: 1.25 },
+      { id: 'blue', emoji: '💎', name: 'Blue Dream', seedPrice: 450, baseTime: 510, yield: 4, sellPrice: 200, energyCost: 18,
+        unlock: 7, quality: 1.4 },
+      { id: 'alien', emoji: '👽', name: 'Alien Kush', seedPrice: 560, baseTime: 570, yield: 4, sellPrice: 230, energyCost: 20,
+        unlock: 8, quality: 1.5 },
+      { id: 'cookies', emoji: '🍪', name: 'Girl Scout Cookies', seedPrice: 700, baseTime: 630, yield: 5, sellPrice: 255, energyCost: 22,
+        unlock: 9, quality: 1.55 },
+      { id: 'og', emoji: '🔥', name: 'OG Kush', seedPrice: 850, baseTime: 690, yield: 5, sellPrice: 300, energyCost: 25,
+        unlock: 10, quality: 1.65 },
+      { id: 'gelato', emoji: '🍦', name: 'Gelato', seedPrice: 1000, baseTime: 750, yield: 5, sellPrice: 340, energyCost: 28,
+        unlock: 12, quality: 1.75 },
+      { id: 'wedding', emoji: '🎂', name: 'Wedding Cake', seedPrice: 1200, baseTime: 810, yield: 6, sellPrice: 380, energyCost: 30,
+        unlock: 15, quality: 1.85 },
+      { id: 'runtz', emoji: '🍬', name: 'Runtz', seedPrice: 1450, baseTime: 870, yield: 6, sellPrice: 420, energyCost: 33,
+        unlock: 18, quality: 1.95 },
+      { id: 'zkittlez', emoji: '🌈', name: 'Zkittlez', seedPrice: 1700, baseTime: 930, yield: 7, sellPrice: 460, energyCost: 36,
+        unlock: 20, quality: 2.05 },
+      { id: 'kush', emoji: '👑', name: 'Master Kush', seedPrice: 2100, baseTime: 1000, yield: 7, sellPrice: 520, energyCost: 40,
+        unlock: 25, quality: 2.2 },
+      { id: 'glue', emoji: '🦍', name: 'Gorilla Glue', seedPrice: 2600, baseTime: 1080, yield: 8, sellPrice: 580, energyCost: 45,
+        unlock: 30, quality: 2.35 }
     ];
 
     const POT_LEVELS = [
@@ -2249,8 +2341,8 @@
       { id: 5, emoji: '💎', name: 'Космический горшок', price: 10000, desc: '+25% урожай · +15% скорость · −50% болезни',
         yieldMult: 1.25, speedMult: 1.15, waterMult: 0.7, diseaseMult: 0.5, healthBonus: 15 }
     ];
-    const VENT_FILTER_MS = 20 * 60 * 1000;
-    const VENT_FILTER_PRICE = 80;
+    const VENT_FILTER_MS = 15 * 60 * 1000;
+    const VENT_FILTER_PRICE = 120;
 
     const LAMPS = [
       { id: 'lamp1', emoji: '💡', name: 'CFL', price: 150, power: 1.15, desc: '+15% скорость' },
@@ -2274,11 +2366,10 @@
     ];
 
     const PRODUCTS = {
-      dried: { name: 'Сушка', emoji: '🍂', mult: 1.4, energy: 2, from: 'raw', need: 1, drySec: 45 },
-      // craftSec — секунд на 1 шт готового продукта
-      joint: { name: 'Косяк', emoji: '🚬', mult: 1.9, energy: 5, from: 'dried', need: 1, craftSec: 180 },
-      oil: { name: 'Масло', emoji: '🧴', mult: 2.4, energy: 8, from: 'dried', need: 2, craftSec: 600 },
-      edible: { name: 'Еда', emoji: '🍪', mult: 2.8, energy: 10, from: 'dried', need: 3, craftSec: 900 }
+      dried: { name: 'Сушка', emoji: '🍂', mult: 1.25, energy: 3, from: 'raw', need: 1, drySec: 75 },
+      joint: { name: 'Косяк', emoji: '🚬', mult: 1.55, energy: 6, from: 'dried', need: 1, craftSec: 180 },
+      oil: { name: 'Масло', emoji: '🧴', mult: 1.9, energy: 10, from: 'dried', need: 2, craftSec: 600 },
+      edible: { name: 'Еда', emoji: '🍪', mult: 2.15, energy: 12, from: 'dried', need: 3, craftSec: 900 }
     };
     const DRY_MAX_SLOTS = 4;
     const CRAFT_MAX_SLOTS = 4;
@@ -2378,6 +2469,17 @@
       lastBonusTime: 0,
       bonusLog: [],
       lastHeatCheck: Date.now(),
+      dailyQuests: null,
+      dailyQuestDay: null,
+      weeklyGoal: null,
+      weeklyGoalWeek: null,
+      tutorialStep: 0,
+      tutorialDone: false,
+      clanId: null,
+      clanName: null,
+      activityFeed: [],
+      offlineApplied: false,
+
       gameTime: 12 * 60,
       policeActive: false,
       jailUntil: 0,
@@ -2691,17 +2793,35 @@
 
 
 
-    function xpFor(l) { return l * 120; }
+    function xpFor(l) {
+      // Крутая кривая: уровни после 20–30 заметно медленнее
+      l = Math.max(1, Math.floor(l) || 1);
+      return Math.floor(100 + l * 160 + Math.pow(l, 1.5) * 12);
+    }
+
+    function calcMaxEnergy(level) {
+      level = Math.max(1, Math.floor(level) || 1);
+      // Мягкий потолок энергии: быстро до ~30, потом медленно
+      const base = 100;
+      const early = Math.min(level - 1, 25) * 6;   // +150 к ур.26
+      const late = Math.max(0, level - 26) * 2;    // дальше по +2
+      return Math.min(320, base + early + late);
+    }
 
     function addXp(a) {
+      a = Math.max(0, Math.floor(Number(a) || 0));
+      // Анти-абуз: за раз не больше 80 XP
+      if (a > 80) a = 80;
       state.xp += a;
       let up = false;
-      while (state.xp >= xpFor(state.level)) {
+      let guard = 0;
+      while (state.xp >= xpFor(state.level) && guard < 20) {
         state.xp -= xpFor(state.level);
         state.level++;
-        state.maxEnergy = 100 + (state.level - 1) * 8;
-        state.energy = state.maxEnergy;
+        state.maxEnergy = calcMaxEnergy(state.level);
+        state.energy = Math.min(state.maxEnergy, (state.energy || 0) + 20); // не полный refill
         up = true;
+        guard++;
       }
       if (up) {
         showToast('🎉 Уровень ' + state.level + '!');
@@ -3633,6 +3753,9 @@
 
         pot.water = Math.max(0, pot.water - waterDrain * dt);
 
+        // Накопительный рост (лампа/удобрения ускоряют, не откатывают)
+        advanceGrowth(pot, dt);
+
         // Оценка ухода (для качества урожая)
         if (pot.careSamples == null) pot.careSamples = 0;
         if (pot.careSum == null) pot.careSum = 0;
@@ -3665,7 +3788,7 @@
 
         if (pot.lamp && pot.stage > 0 && pot.stage < 5) {
           const cost = LAMP_ENERGY_COST[pot.lamp] || 0;
-          state.energy = Math.max(0, state.energy - cost * dt * 0.08);
+          state.energy = Math.max(0, state.energy - cost * dt * 0.035);
         }
 
         let healthRegen = 0.15;
@@ -3782,22 +3905,18 @@
       pot.thc = Math.min(100, Math.max(0, thc * multiplier));
     }
 
-    function getEffectiveTime(pot) {
-      const s = getStrain(pot.strain);
-      if (!s) return 9999;
+    function getGrowthSpeedMult(pot) {
       let mult = (pot.speedMult || 1);
       const weather = getWeatherMult();
-      mult *= weather.speedMult;
+      mult *= (weather.speedMult || 1);
 
-      // Реализм: зона комфорта воды 35–75%. Сушь/перелив тормозят рост.
       const w = pot.water || 0;
       if (w < 15) mult *= 0.35;
       else if (w < 30) mult *= 0.65;
       else if (w > 90) mult *= 0.55;
       else if (w > 80) mult *= 0.8;
-      else if (w >= 40 && w <= 70) mult *= 1.08; // идеальная влажность
+      else if (w >= 40 && w <= 70) mult *= 1.08;
 
-      // Здоровье влияет на скорость
       const h = pot.health || 0;
       if (h < 40) mult *= 0.5;
       else if (h < 60) mult *= 0.75;
@@ -3806,30 +3925,54 @@
       if (pot.disease) mult *= 0.55;
       if (pot.pests) mult *= 0.6;
 
-      if (pot.lamp && state.energy > 2) {
+      if (pot.lamp) {
         const l = getLamp(pot.lamp);
-        if (l) {
-          const ef = Math.min(1, state.energy / 15);
+        if (l && l.power) {
+          const ef = (state.energy < 5) ? 0.5 : 1;
           mult *= (1 + (l.power - 1) * ef);
         }
       } else {
-        // Без лампы днём ок, номедленнее; ночью почти стоп (уже в tick)
-        mult *= 0.85;
+        mult *= 0.9;
       }
+
       if (state.room && state.room.heater) mult *= 1.12;
-      if (isVentRunning()) mult *= 1.06;
-      const ps = getPotStats(pot);
+      if (typeof isVentRunning === 'function' && isVentRunning()) mult *= 1.06;
+      const ps = typeof getPotStats === 'function' ? getPotStats(pot) : null;
       if (ps && ps.speedMult) mult *= ps.speedMult;
+      if (typeof clanGrowthBonus === 'function') mult *= clanGrowthBonus();
+
       if (mult < 0.08) mult = 0.08;
-      return s.baseTime / mult;
+      if (mult > 5) mult = 5;
+      return mult;
+    }
+
+    function advanceGrowth(pot, dt) {
+      if (!pot || !pot.strain || !pot.plantedAt) return;
+      if ((pot.growthProgress || 0) >= 1) { pot.growthProgress = 1; return; }
+      const s = getStrain(pot.strain);
+      if (!s || !s.baseTime) return;
+      const mult = getGrowthSpeedMult(pot);
+      pot.growthProgress = Math.min(1, (pot.growthProgress || 0) + (dt * mult) / s.baseTime);
+    }
+
+    function getEffectiveTime(pot) {
+      const s = getStrain(pot.strain);
+      if (!s) return 9999;
+      const prog = getProgress(pot);
+      if (prog >= 1) return 0;
+      const mult = getGrowthSpeedMult(pot);
+      return (s.baseTime / mult) * (1 - prog);
     }
 
     function getProgress(pot) {
       if (!pot.strain || !pot.plantedAt) return 0;
-      const t = getEffectiveTime(pot);
-      if (t <= 0) return 1;
-      const progress = (Date.now() - pot.plantedAt) / 1000 / t;
-      return Math.min(1, progress);
+      if (pot.growthProgress == null) {
+        const s = getStrain(pot.strain);
+        if (!s) return 0;
+        const elapsed = (Date.now() - pot.plantedAt) / 1000;
+        pot.growthProgress = Math.min(0.99, Math.max(0, elapsed / s.baseTime));
+      }
+      return Math.min(1, Math.max(0, pot.growthProgress || 0));
     }
 
     function updatePotStage(pot) {
@@ -3902,13 +4045,20 @@
       if (amount < 1) amount = 1;
 
       state.totalHarvests = (state.totalHarvests || 0) + 1;
+      if (typeof questTrack === 'function') { questTrack('harvest', 1); }
+      if (typeof playSfx === 'function') playSfx('harvest');
+      if (typeof pushFeed === 'function') pushFeed('Собран урожай');
+      if ((state.totalHarvests || 0) === 1 && !state.refHintShown) {
+        state.refHintShown = true;
+        setTimeout(function(){ showToast('🤝 Позови друга по реф-ссылке — оба получите бонус!'); }, 800);
+      }
       state.inventory[s.id] = (state.inventory[s.id] || 0) + amount;
 
       showToast(`🌿 ${qName}! +${amount} ${s.emoji} ${s.name} [ТГК: ${Math.round(pot.thc||0)}%] — на склад`);
       haptic('success');
-      addXp(amount * 2 + Math.floor(q * 3) + Math.floor((pot.thc || 0) / 10));
+      addXp(Math.min(25, 4 + amount + Math.floor(q * 2)));
 
-      addHeat(amount * 0.3);
+      addHeat(0.8 + amount * 0.45);
 
       pot.strain = null;
       pot.plantedAt = null;
@@ -3937,9 +4087,11 @@
       const pot = findPot(id) || state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
-      if (!godMode && Math.floor(state.energy) < 2) { showToast('Нужно 2⚡', true); return; }
-      if (!godMode) state.energy = Math.floor(state.energy) - 2;
-      pot.water = Math.min(100, pot.water + 45);
+      if (!godMode && Math.floor(state.energy) < 3) { showToast('Нужно 3⚡', true); return; }
+      if (!godMode) state.energy = Math.floor(state.energy) - 3;
+      pot.water = Math.min(100, pot.water + 40);
+      if (typeof questTrack === 'function') questTrack('water', 1);
+      if (typeof playSfx === 'function') playSfx('water');
       showToast('💧 Полито!');
       haptic('medium');
       addXp(1);
@@ -4120,6 +4272,7 @@
       pot.disease = false;
       pot.pests = false;
       pot.pestLevel = 0;
+      pot.growthProgress = 0;
       pot.speedMult = 1 + (h.quality - 1) * 0.2;
       pot.yieldMult = 1 + (h.quality - 1) * 0.15;
       pot.lastTick = Date.now();
@@ -4176,6 +4329,7 @@
       pot.pestLevel = 0;
       pot.speedMult = 1;
       pot.yieldMult = 1;
+      pot.growthProgress = 0;
       pot.lastTick = Date.now();
       pot.thc = 0;
       pot.careScore = 50;
@@ -4195,7 +4349,7 @@
       // Первый горшок уже выдан бесплатно. Следующие — с реальной ценой.
       const n = state.pots.length; // 1, 2, 3...
       // 2-й: 200$, 3-й: 350$, 4-й: 550$, 5-й: 800$ ...
-      return 50 + n * 150;
+      return 120 + n * 220 + Math.floor(n * n * 15);
     }
 
     let _buyingPot = false;
@@ -4365,7 +4519,8 @@
           pot.yieldMult = (pot.yieldMult || 1) * (1 + f.value);
         }
         pot.fert = fid;
-        showToast(f.emoji + ' ' + f.name + ' применено');
+        const left = Math.ceil(getEffectiveTime(pot));
+        showToast(f.emoji + ' ' + f.name + ' · рост быстрее · ~' + formatTime(left));
       }
       closeModal('modal-fert');
       haptic('success');
@@ -4410,7 +4565,7 @@
       if (pot.lamp) { state.lamps[pot.lamp] = (state.lamps[pot.lamp] || 0) + 1; }
       state.lamps[lampId]--;
       pot.lamp = lampId;
-      showToast('💡 Лампа установлена');
+      showToast('💡 Лампа ускоряет рост · ~' + formatTime(Math.ceil(getEffectiveTime(pot))) + ' · Лампа установлена');
       haptic('success');
       closeModal('modal-lamp');
       save();
@@ -4620,6 +4775,7 @@
         });
         addHeat(0.25 * qty);
         showToast('🍂 На сушке ×' + qty + ' (~' + Math.ceil(sec) + ' сек)');
+        if (typeof questTrack === 'function') { questTrack('dry', 1); questTrack('dry_qty', qty); }
       } else {
         if (!state.craftQueue) state.craftQueue = [];
         const activeC = state.craftQueue.filter(j => !j.done).length;
@@ -4658,6 +4814,7 @@
         addHeat(need * 0.25);
         const mins = Math.ceil(sec / 60);
         showToast(p.emoji + ' ' + p.name + ' ×' + qty + ' в работе (~' + mins + ' мин)');
+        if (typeof questTrack === 'function') questTrack('craft', 1);
       }
       haptic('success');
       addXp(2 + qty);
@@ -4898,16 +5055,40 @@
       if (qty <= 0) { showToast('Выберите количество', true); return; }
       if ((state.inventory[key] || 0) < qty) { showToast('Недостаточно товара', true); return; }
       if (!buyerId) { showToast('Выбери покупателя', true); return; }
-      const total = qty * price;
+      let unit = price;
+      // Сезонный бонус к цене
+      if (typeof getSeasonEvent === 'function') {
+        const ev = getSeasonEvent();
+        if (ev && ev.sellBonus) unit = Math.floor(unit * ev.sellBonus);
+      }
+      const total = qty * unit;
       const buyer = getBuyer(buyerId);
       addMoney(total);
       state.inventory[key] -= qty;
       if (state.inventory[key] <= 0) delete state.inventory[key];
-      showToast(`💰 ${buyer ? buyer.emoji + ' ' + buyer.name : ''}: ${qty} шт. за ${total}$`);
+      // Риск: крупные сделки сильнее поднимают палево
+      let heatGain = total / 7;
+      if (total >= 2000) heatGain *= 1.25;
+      if (total >= 8000) heatGain *= 1.45;
+      if (total >= 25000) heatGain *= 1.35;
+      addHeat(Math.min(18, heatGain)); // потолок за одну сделку
+      showToast(`💰 ${buyer ? buyer.emoji + ' ' + buyer.name : ''}: ${qty} шт. за ${total}$` + (total >= 5000 ? ' ⚠ палево↑' : ''));
       haptic('success');
       addXp(Math.floor(total / 10));
-      addHeat(total / 10);
       if (buyerId && typeof addBuyerRelationXp === 'function') addBuyerRelationXp(buyerId, total);
+      if (typeof questTrack === 'function') {
+        questTrack('sell', 1);
+        // weekly earn
+        if (state.weeklyGoal && state.weeklyGoal.track === 'earn') {
+          state.weeklyGoal.progress = (state.weeklyGoal.progress || 0) + total;
+          if (state.weeklyGoal.progress >= state.weeklyGoal.need) {
+            state.weeklyGoal.done = true;
+            showToast('🏆 Недельная цель выполнена!');
+          }
+        }
+      }
+      if (typeof pushFeed === 'function') pushFeed('Продажа на ' + total + '$');
+      if (typeof playSfx === 'function') playSfx('ok');
       closeSellModal();
       save();
       render();
@@ -5299,7 +5480,7 @@
 
       // Снижение палева
       let reduction = 0.15; // естественный спад
-      if (isVentRunning()) reduction += 1.0;
+      if (isVentRunning()) reduction += 0.55;
       if (state.heat > 0) {
         state.heat = Math.max(0, state.heat - (dt / 60) * reduction);
       }
@@ -6236,6 +6417,15 @@
     }
 
     function render() {
+      try {
+        if (typeof renderQuests === 'function') renderQuests();
+        if (typeof renderFarmHint === 'function') renderFarmHint();
+        if (typeof renderEventBanner === 'function') renderEventBanner();
+        if (typeof renderWeeklyGoal === 'function') renderWeeklyGoal();
+        if (typeof renderClan === 'function') renderClan();
+        if (typeof renderActivityFeed === 'function') renderActivityFeed();
+      } catch (e) {}
+
       renderHeader();
       renderFarm();
       renderMarket();
@@ -7110,7 +7300,8 @@
 
     setInterval(() => {
       if (state.energy < state.maxEnergy) {
-        const boost = (state.energy < state.maxEnergy * 0.2) ? 0.55 : 0.35;
+        // ~1⚡ / 4–5 сек — не бесконечный спам посадки
+        const boost = (state.energy < state.maxEnergy * 0.15) ? 0.28 : 0.18;
         state.energy = Math.min(state.maxEnergy, state.energy + boost);
       }
       tickPots();
@@ -7162,7 +7353,401 @@
     }, 15000);
 
     load();
+
+    // ============================================================
+    // ====== v5.7: ЗАДАНИЯ / ОФФЛАЙН / ЭКОНОМИКА / СОЦ / ТУТОР ===
+    // ============================================================
+    const QUEST_POOL = [
+      { id: 'water', title: '💧 Полить растения', need: 5, reward: { energy: 15, money: 25 }, track: 'water' },
+      { id: 'harvest', title: '🌿 Собрать урожай', need: 2, reward: { energy: 12, money: 45 }, track: 'harvest' },
+      { id: 'dry', title: '🍂 Запустить сушку', need: 1, reward: { money: 30 }, track: 'dry' },
+      { id: 'sell', title: '💰 Продать товар', need: 1, reward: { money: 35 }, track: 'sell' },
+      { id: 'craft', title: '🧪 Сделать продукт в цехе', need: 1, reward: { money: 40 }, track: 'craft' },
+      { id: 'ref', title: '🤝 Пригласить друга (реф)', need: 1, reward: { money: 100, energy: 20 }, track: 'ref' }
+    ];
+
+    function dayId() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function ensureDailyQuests() {
+      const d = dayId();
+      if (state.dailyQuestDay === d && state.dailyQuests && state.dailyQuests.length) return;
+      state.dailyQuestDay = d;
+      // 3 случайных задания
+      const pool = QUEST_POOL.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+      state.dailyQuests = pool.map(q => ({
+        id: q.id, title: q.title, need: q.need, progress: 0, done: false, claimed: false,
+        reward: q.reward, track: q.track
+      }));
+      save();
+    }
+
+    function questTrack(type, amount) {
+      amount = amount || 1;
+      ensureDailyQuests();
+      let changed = false;
+      (state.dailyQuests || []).forEach(q => {
+        if (q.done || q.track !== type) return;
+        q.progress = Math.min(q.need, (q.progress || 0) + amount);
+        if (q.progress >= q.need) {
+          q.done = true;
+          showToast('✅ Задание: ' + q.title);
+          playSfx('ok');
+        }
+        changed = true;
+      });
+      // weekly
+      ensureWeeklyGoal();
+      if (state.weeklyGoal && !state.weeklyGoal.done) {
+        if (state.weeklyGoal.track === type) {
+          state.weeklyGoal.progress = (state.weeklyGoal.progress || 0) + amount;
+          if (state.weeklyGoal.track === 'money') {
+            /* handled separately */
+          }
+          if (state.weeklyGoal.progress >= state.weeklyGoal.need) {
+            state.weeklyGoal.done = true;
+            showToast('🏆 Недельная цель выполнена! Забери награду в профиле');
+          }
+          changed = true;
+        }
+      }
+      if (changed) { save(); renderQuests(); renderWeeklyGoal(); }
+    }
+
+    function claimQuest(idx) {
+      ensureDailyQuests();
+      const q = state.dailyQuests[idx];
+      if (!q || !q.done || q.claimed) return;
+      q.claimed = true;
+      if (q.reward.money) state.money += q.reward.money;
+      if (q.reward.energy) state.energy = Math.min(state.maxEnergy, state.energy + q.reward.energy);
+      showToast('🎁 Награда: ' + (q.reward.money ? ('+'+q.reward.money+'$ ') : '') + (q.reward.energy ? ('+'+q.reward.energy+'⚡') : ''));
+      playSfx('ok');
+      haptic('success');
+      pushFeed('Ты забрал награду за задание');
+      save(); render(); renderQuests();
+    }
+
+    function renderQuests() {
+      ensureDailyQuests();
+      const el = document.getElementById('quests-panel');
+      if (!el) return;
+      el.innerHTML = '<div class="section-title">📋 Задания дня</div>' + state.dailyQuests.map((q, i) => {
+        const pct = Math.min(100, Math.floor((q.progress || 0) / q.need * 100));
+        return `<div class="quest-card ${q.done ? 'done' : ''}">
+          <div style="display:flex;justify-content:space-between;gap:8px;">
+            <span>${q.title}</span>
+            <span style="color:var(--hint);">${q.progress||0}/${q.need}</span>
+          </div>
+          <div class="quest-bar"><div style="width:${pct}%"></div></div>
+          ${q.done && !q.claimed ? `<button class="btn btn-small btn-gold" style="margin-top:6px;" onclick="claimQuest(${i})">Забрать награду</button>` : ''}
+          ${q.claimed ? '<div style="font-size:10px;color:var(--accent);margin-top:4px;">✓ Получено</div>' : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function ensureWeeklyGoal() {
+      const w = (typeof getWeekId === 'function') ? getWeekId() : dayId();
+      if (state.weeklyGoalWeek === w && state.weeklyGoal) return;
+      state.weeklyGoalWeek = w;
+      const goals = [
+        { title: 'Заработай 12000$ за неделю', need: 12000, track: 'earn', reward: 900 },
+        { title: 'Собери 10 урожаев', need: 10, track: 'harvest', reward: 500 },
+        { title: 'Сделай 12 сушек', need: 12, track: 'dry_qty', reward: 550 }
+      ];
+      state.weeklyGoal = Object.assign({ progress: 0, done: false, claimed: false }, goals[Math.floor(Math.random()*goals.length)]);
+    }
+
+    function renderWeeklyGoal() {
+      ensureWeeklyGoal();
+      const el = document.getElementById('weekly-goal-box');
+      if (!el || !state.weeklyGoal) return;
+      const g = state.weeklyGoal;
+      const pct = Math.min(100, Math.floor((g.progress || 0) / g.need * 100));
+      el.innerHTML = `<div><b>${g.title}</b></div>
+        <div style="color:var(--hint);margin:4px 0;">${Math.floor(g.progress||0)} / ${g.need}</div>
+        <div class="quest-bar"><div style="width:${pct}%"></div></div>
+        ${g.done && !g.claimed ? `<button class="btn btn-small btn-gold" style="margin-top:6px;" onclick="claimWeeklyGoal()">🎁 +${g.reward}$</button>` : ''}
+        ${g.claimed ? '<div style="font-size:10px;color:var(--accent);">✓ Награда получена</div>' : ''}`;
+    }
+
+    function claimWeeklyGoal() {
+      if (!state.weeklyGoal || !state.weeklyGoal.done || state.weeklyGoal.claimed) return;
+      state.weeklyGoal.claimed = true;
+      state.money += state.weeklyGoal.reward;
+      showToast('🏆 Недельная награда +' + state.weeklyGoal.reward + '$');
+      playSfx('ok');
+      save(); render(); renderWeeklyGoal();
+    }
+
+    function getSeasonEvent() {
+      // сезонный ивент: 2 недели окна по номеру недели года
+      const d = new Date();
+      const onejan = new Date(d.getFullYear(), 0, 1);
+      const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+      const active = (week % 4) <= 1; // каждые ~2 недели из 4
+      return {
+        active,
+        name: '🍁 Сезон «Золотая шишка»',
+        desc: active ? 'Все сушки +10% к цене продажи. Успей до конца сезона!' : 'Следующий сезон скоро',
+        sellBonus: active ? 1.10 : 1
+      };
+    }
+
+    function renderEventBanner() {
+      const el = document.getElementById('event-banner');
+      if (!el) return;
+      const ev = getSeasonEvent();
+      if (!ev.active) { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      el.innerHTML = `<b>${ev.name}</b><br><span style="opacity:0.85">${ev.desc}</span>`;
+    }
+
+    function getFarmHint() {
+      if (!state.tutorialDone && (state.tutorialStep || 0) < 5) return null;
+      const pots = state.pots || [];
+      const planted = pots.filter(p => p.strain && p.plantedAt);
+      if (!pots.length) return '➕ Купи или используй горшок';
+      if (!planted.length) return '🌱 Посади семена в пустой горшок';
+      for (const p of planted) {
+        if (p.pests) return '🕸 Тапни по кусту с вредителями или купи лекарство';
+        if ((p.water || 0) < 25) return '💧 Растение хочет пить — полей или «Полить всё»';
+        if (getProgress(p) >= 1) return '✨ Урожай готов — нажми «Собрать»';
+      }
+      if (state.dryQueue && state.dryQueue.some(j => !j.done)) return '🍂 Сушка идёт — загляни в цех';
+      if (state.heat >= 70) return '👮 Палево высокое — вентиляция или осторожнее с продажами';
+      if ((state.energy || 0) < 15) return '⚡ Мало энергии — подожди или купи энергетик';
+      const raw = Object.keys(state.inventory || {}).filter(k => !k.includes('_') && (state.inventory[k]||0) > 0);
+      if (raw.length) return '🧪 Отнеси сырьё в цех на сушку';
+      return '🌿 Ухаживай за кустами — полив и свет ускоряют рост';
+    }
+
+    function renderFarmHint() {
+      const el = document.getElementById('farm-hint');
+      if (!el) return;
+      const h = getFarmHint();
+      if (!h) { el.style.display = 'none'; return; }
+      el.style.display = 'flex';
+      el.innerHTML = '<span>💡</span><span>' + h + '</span>';
+    }
+
+    function waterAllPots() {
+      if (typeof guardJailAction === 'function' && guardJailAction()) return;
+      let n = 0;
+      (state.pots || []).forEach(p => {
+        if (!p.strain || !p.isActive) return;
+        if ((p.water || 0) >= 95) return;
+        if (!godMode && state.energy < 3) return;
+        if (!godMode) state.energy = Math.max(0, state.energy - 3);
+        p.water = Math.min(100, (p.water || 0) + 32);
+        n++;
+        questTrack('water', 1);
+      });
+      if (n) {
+        showToast('💧 Полито кустов: ' + n);
+        playSfx('water');
+        haptic('medium');
+        save(); render();
+      } else showToast('Нечего поливать или мало ⚡', true);
+    }
+
+    /** Оффлайн-рост до 6 часов */
+    function applyOfflineProgress() {
+      if (state.offlineApplied) return;
+      const last = state.lastTick || state.lastUpdate || Date.now();
+      let dt = (Date.now() - last) / 1000;
+      if (dt < 30) return;
+      const cap = 6 * 3600; // 6 часов
+      dt = Math.min(dt, cap);
+      let grew = 0;
+      (state.pots || []).forEach(p => {
+        if (!p.strain || !p.plantedAt) return;
+        const before = getProgress(p);
+        // упрощённый тик: вода чуть падает, рост копится
+        const steps = Math.min(120, Math.floor(dt / 30));
+        for (let i = 0; i < steps; i++) {
+          if (typeof advanceGrowth === 'function') advanceGrowth(p, 30);
+          p.water = Math.max(5, (p.water || 50) - 0.8);
+        }
+        if (getProgress(p) > before + 0.01) grew++;
+      });
+      // сушка / крафт тоже
+      if (typeof tickDryQueue === 'function') tickDryQueue();
+      state.offlineApplied = true;
+      state.lastTick = Date.now();
+      if (grew > 0) {
+        const mins = Math.floor(dt / 60);
+        showToast('🌙 Пока тебя не было (~' + mins + 'м): подросли кусты ×' + grew);
+      }
+      save();
+    }
+
+    function pushFeed(text) {
+      if (!state.activityFeed) state.activityFeed = [];
+      state.activityFeed.unshift({ t: Date.now(), text: text });
+      if (state.activityFeed.length > 30) state.activityFeed.length = 30;
+      renderActivityFeed();
+    }
+
+    function renderActivityFeed() {
+      const el = document.getElementById('activity-feed');
+      if (!el) return;
+      const list = state.activityFeed || [];
+      if (!list.length) {
+        el.innerHTML = '<div class="feed-item">Пока тихо — сыграй, продай, пригласи друга</div>';
+        return;
+      }
+      el.innerHTML = list.slice(0, 15).map(i => {
+        const tm = new Date(i.t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        return `<div class="feed-item"><b>${tm}</b> · ${i.text}</div>`;
+      }).join('');
+    }
+
+    async function createClan() {
+      const name = (document.getElementById('clan-name-input') || {}).value || '';
+      if (name.trim().length < 2) { showToast('Введи название', true); return; }
+      try {
+        const r = await fetch((SERVER_URL||'') + '/api/clan/create', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ userId, userName: getUserName(), name: name.trim() })
+        });
+        const data = await r.json();
+        if (data.success) {
+          state.clanId = data.clanId;
+          state.clanName = data.name;
+          showToast('🏠 Теплица создана: ' + data.name);
+          save(); renderClan();
+        } else showToast(data.error || 'Ошибка', true);
+      } catch (e) {
+        // локальный фолбэк
+        state.clanId = 'local_' + userId;
+        state.clanName = name.trim();
+        showToast('🏠 Локальная теплица: ' + state.clanName + ' (+5% рост)');
+        save(); renderClan();
+      }
+    }
+
+    async function joinClan() {
+      const name = (document.getElementById('clan-name-input') || {}).value || '';
+      if (name.trim().length < 2) { showToast('Введи название теплицы', true); return; }
+      try {
+        const r = await fetch((SERVER_URL||'') + '/api/clan/join', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ userId, userName: getUserName(), name: name.trim() })
+        });
+        const data = await r.json();
+        if (data.success) {
+          state.clanId = data.clanId;
+          state.clanName = data.name;
+          showToast('🏠 Ты в теплице: ' + data.name);
+          save(); renderClan();
+        } else showToast(data.error || 'Не найдена', true);
+      } catch (e) {
+        state.clanId = 'join_' + name.trim().toLowerCase();
+        state.clanName = name.trim();
+        showToast('🏠 Вход в: ' + state.clanName);
+        save(); renderClan();
+      }
+    }
+
+    function renderClan() {
+      const el = document.getElementById('clan-status');
+      if (!el) return;
+      if (state.clanName) {
+        el.innerHTML = '✅ <b>' + state.clanName + '</b> · бонус роста <b>+5%</b>';
+      } else {
+        el.textContent = 'Создай или войди по названию';
+      }
+    }
+
+    function clanGrowthBonus() {
+      return state.clanId ? 1.05 : 1;
+    }
+
+    // --- SFX ---
+    function playSfx(type) {
+      try {
+        const ctx = window._sfxCtx || (window._sfxCtx = new (window.AudioContext || window.webkitAudioContext)());
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        const now = ctx.currentTime;
+        if (type === 'water') { o.frequency.value = 520; g.gain.setValueAtTime(0.08, now); g.gain.exponentialRampToValueAtTime(0.001, now+0.15); }
+        else if (type === 'ok') { o.frequency.value = 660; g.gain.setValueAtTime(0.07, now); g.gain.exponentialRampToValueAtTime(0.001, now+0.2); }
+        else if (type === 'harvest') { o.frequency.value = 440; g.gain.setValueAtTime(0.09, now); g.gain.exponentialRampToValueAtTime(0.001, now+0.25); }
+        else { o.frequency.value = 330; g.gain.setValueAtTime(0.05, now); g.gain.exponentialRampToValueAtTime(0.001, now+0.12); }
+        o.start(now); o.stop(now + 0.3);
+      } catch (e) {}
+    }
+
+    // --- Tutorial ---
+    const TUTORIAL_STEPS = [
+      { emoji: '🌱', title: 'Теплица Fermarast', text: 'Ты выращиваешь сорта, сушишь, перерабатываешь и продаёшь. За 2 минуты покажем основу.' },
+      { emoji: '🪴', title: '1. Посади', text: 'Открой пустой горшок → выбери сорт (Skunk подойдёт) → Посадить.' },
+      { emoji: '💧', title: '2. Полей', text: 'Следи за водой. Кнопка «Полить всё» поливает все кусты сразу.' },
+      { emoji: '✨', title: '3. Собери', text: 'Когда куст готов — «Собрать». Потом в цехе суши и делай косяки / масло / еду.' },
+      { emoji: '💰', title: '4. Продай', text: 'Рынок → продай товар покупателям. Крупные сделки поднимают палево!' },
+      { emoji: '🤝', title: 'Друзья', text: 'После первого урожая поделись реф-ссылкой — вы оба получите бонусы. Удачи!' }
+    ];
+
+    function startTutorialIfNeeded() {
+      if (state.tutorialDone) return;
+      if ((state.totalHarvests || 0) > 0 && (state.tutorialStep || 0) === 0) {
+        // уже играет — не мешаем
+        state.tutorialDone = true;
+        save();
+        return;
+      }
+      showTutorialStep(state.tutorialStep || 0);
+    }
+
+    function showTutorialStep(i) {
+      const ov = document.getElementById('tutorial-overlay');
+      if (!ov) return;
+      if (i >= TUTORIAL_STEPS.length) {
+        tutorialSkip();
+        return;
+      }
+      state.tutorialStep = i;
+      const s = TUTORIAL_STEPS[i];
+      document.getElementById('tut-emoji').textContent = s.emoji;
+      document.getElementById('tut-title').textContent = s.title;
+      document.getElementById('tut-text').textContent = s.text;
+      document.getElementById('tut-btn').textContent = (i === TUTORIAL_STEPS.length - 1) ? 'Играть!' : 'Далее';
+      ov.classList.add('show');
+      save();
+    }
+
+    function tutorialNext() {
+      showTutorialStep((state.tutorialStep || 0) + 1);
+    }
+
+    function tutorialSkip() {
+      state.tutorialDone = true;
+      const ov = document.getElementById('tutorial-overlay');
+      if (ov) ov.classList.remove('show');
+      save();
+    }
+
+    window.claimQuest = claimQuest;
+    window.claimWeeklyGoal = claimWeeklyGoal;
+    window.waterAllPots = waterAllPots;
+    window.createClan = createClan;
+    window.joinClan = joinClan;
+    window.tutorialNext = tutorialNext;
+    window.tutorialSkip = tutorialSkip;
+
+
     console.log('Fermarast ' + APP_VERSION);
+    try {
+      if (typeof applyOfflineProgress === 'function') applyOfflineProgress();
+      if (typeof ensureDailyQuests === 'function') ensureDailyQuests();
+      if (typeof ensureWeeklyGoal === 'function') ensureWeeklyGoal();
+      setTimeout(function(){ if (typeof startTutorialIfNeeded === 'function') startTutorialIfNeeded(); }, 700);
+    } catch (e) { console.log(e); }
+
     handleReferral();
     // Повторно читаем start_param (Telegram иногда отдаёт с задержкой)
     setTimeout(() => handleReferral(), 800);
