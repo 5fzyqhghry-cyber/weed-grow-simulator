@@ -1589,43 +1589,64 @@
 
 
   
-    /* Bottom navigation — крупные иконки */
+    /* Bottom navigation — всегда поверх, не уезжает под край */
     .tabs {
       position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
+      left: 8px !important;
+      right: 8px !important;
+      bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
       top: auto !important;
-      z-index: 300 !important;
-      background: rgba(12, 18, 14, 0.96) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
-      border-top: 1px solid rgba(160, 180, 140, 0.25) !important;
-      border-bottom: none !important;
-      padding: 10px 6px calc(10px + env(safe-area-inset-bottom)) !important;
-      box-shadow: 0 -10px 32px rgba(0,0,0,0.45) !important;
-      gap: 4px !important;
-      min-height: 64px !important;
+      z-index: 9999 !important;
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      scrollbar-width: none !important;
+      background: rgba(10, 16, 12, 0.97) !important;
+      backdrop-filter: blur(20px) saturate(1.2) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+      border: 1px solid rgba(160, 200, 150, 0.28) !important;
+      border-radius: 22px !important;
+      padding: 8px 6px !important;
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 -2px 12px rgba(110, 200, 120, 0.08) !important;
+      gap: 2px !important;
+      min-height: 58px !important;
       align-items: center !important;
+      justify-content: space-around !important;
+      pointer-events: auto !important;
     }
+    .tabs::-webkit-scrollbar { display: none !important; }
     .content {
-      padding-bottom: 100px !important;
+      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    body {
+      padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
     }
     .tab {
       position: relative;
-      font-size: 26px !important;
-      line-height: 1.1 !important;
-      padding: 10px 12px !important;
-      min-width: 48px !important;
-      min-height: 48px !important;
+      font-size: 24px !important;
+      line-height: 1 !important;
+      padding: 10px 8px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
+      flex: 0 0 auto !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
       border-radius: 14px !important;
+      background: transparent !important;
+      opacity: 0.75 !important;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease !important;
     }
     .tab.active {
-      font-size: 28px !important;
-      transform: scale(1.05);
+      font-size: 26px !important;
+      opacity: 1 !important;
+      transform: scale(1.08);
+      background: rgba(110, 200, 120, 0.18) !important;
+      box-shadow: 0 0 12px rgba(110, 200, 120, 0.2);
     }
     .tab-badge {
       position: absolute;
@@ -2244,7 +2265,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.8-balance · 05.10';
+    const APP_VERSION = 'v5.8.2-nav · 05.10';
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
     const tg = window.Telegram?.WebApp;
@@ -2343,6 +2364,10 @@
     ];
     const VENT_FILTER_MS = 15 * 60 * 1000;
     const VENT_FILTER_PRICE = 120;
+    const AUTO_RUN_MS = 20 * 60 * 1000;   // автополив 20 мин
+    const AUTO_REFILL_PRICE = 100;        // бак воды / картридж
+    const HEATER_RUN_MS = 18 * 60 * 1000; // обогреватель 18 мин
+    const HEATER_FUEL_PRICE = 90;         // топливо
 
     const LAMPS = [
       { id: 'lamp1', emoji: '💡', name: 'CFL', price: 150, power: 1.15, desc: '+15% скорость' },
@@ -2360,9 +2385,9 @@
     ];
 
     const ROOM_UPGRADES = [
-      { id: 'vent', emoji: '🌀', name: 'Вентиляция', price: 500, type: 'vent', desc: 'Система −палево. Фильтр 20 мин, замена 80$' },
-      { id: 'auto', emoji: '💦', name: 'Автополив', price: 1200, type: 'auto', desc: 'Автоматический полив' },
-      { id: 'heater', emoji: '🔥', name: 'Обогреватель', price: 800, type: 'heater', desc: 'Скорость роста +15%' }
+      { id: 'vent', emoji: '🌀', name: 'Вентиляция', price: 500, type: 'vent', desc: '−палево. Фильтр 15 мин, замена ' + VENT_FILTER_PRICE + '$' },
+      { id: 'auto', emoji: '💦', name: 'Автополив', price: 1200, type: 'auto', desc: 'Система. Бак 20 мин, заправка ' + AUTO_REFILL_PRICE + '$' },
+      { id: 'heater', emoji: '🔥', name: 'Обогреватель', price: 800, type: 'heater', desc: '+рост. Топливо 18 мин, ' + HEATER_FUEL_PRICE + '$' }
     ];
 
     const PRODUCTS = {
@@ -2766,6 +2791,125 @@
       haptic('success');
       save(); render();
     }
+    
+    function migrateRoomDevice(keyOwned, keyLegacy, keyOn, keyUntil, runMs) {
+      if (!state.room) state.room = {};
+      if (state.room[keyLegacy] && !state.room[keyOwned]) {
+        state.room[keyOwned] = true;
+        if (!state.room[keyUntil]) state.room[keyUntil] = Date.now() + runMs;
+        if (state.room[keyOn] === undefined) state.room[keyOn] = true;
+      }
+    }
+    function isAutoRunning() {
+      if (!state.room) return false;
+      migrateRoomDevice('autoOwned', 'auto', 'autoOn', 'autoUntil', AUTO_RUN_MS);
+      if (!state.room.autoOwned && !state.room.auto) return false;
+      if (!state.room.autoOn) return false;
+      if (Date.now() >= (state.room.autoUntil || 0)) {
+        state.room.autoOn = false;
+        return false;
+      }
+      return true;
+    }
+    function isHeaterRunning() {
+      if (!state.room) return false;
+      migrateRoomDevice('heaterOwned', 'heater', 'heaterOn', 'heaterUntil', HEATER_RUN_MS);
+      if (!state.room.heaterOwned && !state.room.heater) return false;
+      if (!state.room.heaterOn) return false;
+      if (Date.now() >= (state.room.heaterUntil || 0)) {
+        state.room.heaterOn = false;
+        return false;
+      }
+      return true;
+    }
+    function getAutoLeftSec() {
+      if (!state.room || !state.room.autoOn) return 0;
+      return Math.max(0, Math.floor(((state.room.autoUntil || 0) - Date.now()) / 1000));
+    }
+    function getHeaterLeftSec() {
+      if (!state.room || !state.room.heaterOn) return 0;
+      return Math.max(0, Math.floor(((state.room.heaterUntil || 0) - Date.now()) / 1000));
+    }
+    function toggleAuto() {
+      if (!state.room) state.room = {};
+      if (!state.room.autoOwned && !state.room.auto) {
+        showToast('Сначала купи автополив', true); return;
+      }
+      state.room.autoOwned = true;
+      if (state.room.autoOn && getAutoLeftSec() > 0) {
+        state.room.autoOn = false;
+        showToast('💦 Автополив выкл');
+      } else {
+        if ((state.room.autoUntil || 0) <= Date.now()) {
+          showToast('Бак пуст — заправь за ' + AUTO_REFILL_PRICE + '$', true); return;
+        }
+        state.room.autoOn = true;
+        showToast('💦 Автополив вкл · ' + Math.ceil(getAutoLeftSec() / 60) + ' мин');
+      }
+      save(); render();
+    }
+    function refillAuto() {
+      if (!state.room) state.room = {};
+      if (!state.room.autoOwned && !state.room.auto) {
+        showToast('Сначала купи автополив', true); return;
+      }
+      if (Math.floor(state.money) < AUTO_REFILL_PRICE) {
+        showToast('Мало денег (' + AUTO_REFILL_PRICE + '$)', true); return;
+      }
+      state.money = Math.floor(state.money) - AUTO_REFILL_PRICE;
+      state.room.autoOwned = true;
+      if (state.room.autoOn && (state.room.autoUntil || 0) > Date.now()) {
+        state.room.autoUntil += AUTO_RUN_MS;
+      } else {
+        state.room.autoUntil = Date.now() + AUTO_RUN_MS;
+      }
+      state.room.autoOn = true;
+      // полный бак резервуара
+      state.waterReservoir = Math.max(state.waterReservoir || 0, 100);
+      showToast('💦 Бак заправлен · +20 мин (−' + AUTO_REFILL_PRICE + '$)');
+      haptic('success');
+      save(); render();
+    }
+    function toggleHeater() {
+      if (!state.room) state.room = {};
+      if (!state.room.heaterOwned && !state.room.heater) {
+        showToast('Сначала купи обогреватель', true); return;
+      }
+      state.room.heaterOwned = true;
+      if (state.room.heaterOn && getHeaterLeftSec() > 0) {
+        state.room.heaterOn = false;
+        showToast('🔥 Обогреватель выкл');
+      } else {
+        if ((state.room.heaterUntil || 0) <= Date.now()) {
+          showToast('Топливо кончилось — ' + HEATER_FUEL_PRICE + '$', true); return;
+        }
+        state.room.heaterOn = true;
+        showToast('🔥 Обогреватель вкл · ' + Math.ceil(getHeaterLeftSec() / 60) + ' мин');
+      }
+      save(); render();
+    }
+    function refillHeater() {
+      if (!state.room) state.room = {};
+      if (!state.room.heaterOwned && !state.room.heater) {
+        showToast('Сначала купи обогреватель', true); return;
+      }
+      if (Math.floor(state.money) < HEATER_FUEL_PRICE) {
+        showToast('Мало денег (' + HEATER_FUEL_PRICE + '$)', true); return;
+      }
+      state.money = Math.floor(state.money) - HEATER_FUEL_PRICE;
+      state.room.heaterOwned = true;
+      if (state.room.heaterOn && (state.room.heaterUntil || 0) > Date.now()) {
+        state.room.heaterUntil += HEATER_RUN_MS;
+      } else {
+        state.room.heaterUntil = Date.now() + HEATER_RUN_MS;
+      }
+      state.room.heaterOn = true;
+      showToast('🔥 Топливо · +18 мин (−' + HEATER_FUEL_PRICE + '$)');
+      haptic('success');
+      save(); render();
+    }
+
+
     function upgradePot(potId) {
       const pot = findPot(potId);
       if (!pot) return;
@@ -3742,7 +3886,7 @@
         else if (pot.stage >= 3) waterDrain = 1.15 * weather.waterMult * (potStats.waterMult || 1);
         else if (pot.stage >= 2) waterDrain = 0.9 * weather.waterMult * (potStats.waterMult || 1);
 
-        if (state.room.auto && state.waterReservoir > 0) {
+        if (isAutoRunning() && state.waterReservoir > 0) {
           const autoAmount = 0.2 * dt;
           if (state.waterReservoir >= autoAmount) {
             pot.water = Math.min(100, pot.water + autoAmount);
@@ -3796,7 +3940,7 @@
         if (isVentRunning()) { diseaseChance *= 0.3; healthRegen *= 1.4; }
         diseaseChance *= (potStats.diseaseMult || 1);
         healthRegen *= (1 + (potStats.healthBonus || 0) / 100);
-        if (state.room && state.room.heater) healthRegen *= 1.15;
+        if (isHeaterRunning()) healthRegen *= 1.15;
 
         if (pot.water > 25) {
           pot.health = Math.min(100, pot.health + healthRegen * dt);
@@ -3935,7 +4079,7 @@
         mult *= 0.9;
       }
 
-      if (state.room && state.room.heater) mult *= 1.12;
+      if (isHeaterRunning()) mult *= 1.12;
       if (typeof isVentRunning === 'function' && isVentRunning()) mult *= 1.06;
       const ps = typeof getPotStats === 'function' ? getPotStats(pot) : null;
       if (ps && ps.speedMult) mult *= ps.speedMult;
@@ -4441,24 +4585,34 @@
       const price = Math.floor(u.price || 0);
       if (Math.floor(state.money) < price) { showToast('Мало денег (нужно ' + price + '$)', true); return; }
       if (u.type === 'vent' && (state.room.ventOwned || state.room.vent)) {
-        showToast('Система уже есть — меняй фильтр', true);
-        return;
+        showToast('Система уже есть — меняй фильтр', true); return;
       }
-      if (u.type === 'auto' && state.room.auto) { showToast('Уже куплено'); return; }
-      if (u.type === 'heater' && state.room.heater) { showToast('Уже куплено'); return; }
+      if (u.type === 'auto' && (state.room.autoOwned || state.room.auto)) {
+        showToast('Автополив уже куплен — заправляй бак', true); return;
+      }
+      if (u.type === 'heater' && (state.room.heaterOwned || state.room.heater)) {
+        showToast('Обогреватель уже куплен — лей топливо', true); return;
+      }
       state.money = Math.floor(state.money) - price;
       if (u.type === 'vent') {
         state.room.ventOwned = true;
         state.room.vent = true;
         state.room.ventOn = true;
         state.room.ventUntil = Date.now() + VENT_FILTER_MS;
-        showToast('🌀 Вентиляция + фильтр 20 мин');
+        showToast('🌀 Вентиляция + фильтр 15 мин');
       } else if (u.type === 'auto') {
+        state.room.autoOwned = true;
         state.room.auto = true;
-        showToast('🏠 Куплено: ' + u.emoji + ' ' + u.name);
+        state.room.autoOn = true;
+        state.room.autoUntil = Date.now() + AUTO_RUN_MS;
+        state.waterReservoir = Math.max(state.waterReservoir || 0, 100);
+        showToast('💦 Автополив + бак 20 мин');
       } else if (u.type === 'heater') {
+        state.room.heaterOwned = true;
         state.room.heater = true;
-        showToast('🏠 Куплено: ' + u.emoji + ' ' + u.name);
+        state.room.heaterOn = true;
+        state.room.heaterUntil = Date.now() + HEATER_RUN_MS;
+        showToast('🔥 Обогреватель + топливо 18 мин');
       }
       haptic('success');
       addXp(10);
@@ -6226,21 +6380,45 @@
       let ventLabel = 'Нет';
       if (ventOwned) {
         if (ventRun) ventLabel = 'Вкл · ' + Math.ceil(ventLeft / 60) + 'м';
-        else if (ventLeft <= 0 && (state.room.ventUntil || 0) <= Date.now()) ventLabel = 'Фильтр 0';
+        else if ((state.room.ventUntil || 0) <= Date.now()) ventLabel = 'Фильтр 0';
         else ventLabel = 'Выкл';
+      }
+      const autoRun = isAutoRunning();
+      const autoOwned = !!(state.room && (state.room.autoOwned || state.room.auto));
+      let autoLabel = 'Нет';
+      if (autoOwned) {
+        if (autoRun) autoLabel = 'Вкл · ' + Math.ceil(getAutoLeftSec() / 60) + 'м';
+        else if ((state.room.autoUntil || 0) <= Date.now()) autoLabel = 'Бак 0';
+        else autoLabel = 'Выкл';
+      }
+      const heatRun = isHeaterRunning();
+      const heatOwned = !!(state.room && (state.room.heaterOwned || state.room.heater));
+      let heatLabel = 'Нет';
+      if (heatOwned) {
+        if (heatRun) heatLabel = 'Вкл · ' + Math.ceil(getHeaterLeftSec() / 60) + 'м';
+        else if ((state.room.heaterUntil || 0) <= Date.now()) heatLabel = 'Топливо 0';
+        else heatLabel = 'Выкл';
       }
       info.innerHTML = `
           <div class="room-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
               <div class="room-item" style="background:rgba(255,255,255,0.03);padding:6px;border-radius:8px;text-align:center;font-size:10px"><span class="big" style="font-size:20px;display:block">🪴</span><div>${state.pots.length}</div><div class="label" style="color:var(--hint);font-size:8px">Горшков</div></div>
-              <div class="room-item"><span class="big">${ventRun ? '✅' : (ventOwned ? '⏸' : '❌')}</span><div>${ventLabel}</div><div class="label">Вентиляция</div></div>
-              <div class="room-item"><span class="big">${state.room.auto ? '✅' : '❌'}</span><div>${state.room.auto ? 'Вкл' : 'Выкл'}</div><div class="label">Автополив</div></div>
-              <div class="room-item" style="grid-column:span 3;"><span class="big">${state.room.heater ? '✅' : '❌'}</span><div>${state.room.heater ? 'Вкл' : 'Выкл'}</div><div class="label">Обогреватель</div></div>
+              <div class="room-item"><span class="big">${ventRun ? '✅' : (ventOwned ? '⏸' : '❌')}</span><div>${ventLabel}</div><div class="label">Вент.</div></div>
+              <div class="room-item"><span class="big">${autoRun ? '✅' : (autoOwned ? '⏸' : '❌')}</span><div>${autoLabel}</div><div class="label">Автополив</div></div>
+              <div class="room-item" style="grid-column:span 3;"><span class="big">${heatRun ? '✅' : (heatOwned ? '⏸' : '❌')}</span><div>${heatLabel}</div><div class="label">Обогреватель</div></div>
           </div>
           ${ventOwned ? `<div style="display:flex;gap:6px;margin-top:8px;">
-            <button class="btn btn-small ${ventRun ? 'btn-secondary' : ''}" style="flex:1;" onclick="toggleVent()">${ventRun ? '⏸ Выкл вент.' : '▶️ Вкл вент.'}</button>
-            <button class="btn btn-small btn-warning" style="flex:1;" onclick="replaceVentFilter()">🔧 Фильтр ${VENT_FILTER_PRICE}$</button>
-          </div>
-          <div style="font-size:10px;color:var(--hint);margin-top:4px;text-align:center;">Фильтр работает 20 мин. Без него вентиляция не снижает палево.</div>` : ''}
+            <button class="btn btn-small ${ventRun ? 'btn-secondary' : ''}" style="flex:1;" onclick="toggleVent()">${ventRun ? '⏸ Вент.' : '▶️ Вент.'}</button>
+            <button class="btn btn-small btn-warning" style="flex:1;" onclick="replaceVentFilter()">🔧 ${VENT_FILTER_PRICE}$</button>
+          </div>` : ''}
+          ${autoOwned ? `<div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-small ${autoRun ? 'btn-secondary' : ''}" style="flex:1;" onclick="toggleAuto()">${autoRun ? '⏸ Авто' : '▶️ Авто'}</button>
+            <button class="btn btn-small btn-blue" style="flex:1;" onclick="refillAuto()">💦 Бак ${AUTO_REFILL_PRICE}$</button>
+          </div>` : ''}
+          ${heatOwned ? `<div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-small ${heatRun ? 'btn-secondary' : ''}" style="flex:1;" onclick="toggleHeater()">${heatRun ? '⏸ Обогрев' : '▶️ Обогрев'}</button>
+            <button class="btn btn-small btn-warning" style="flex:1;" onclick="refillHeater()">🔥 Топливо ${HEATER_FUEL_PRICE}$</button>
+          </div>` : ''}
+          <div style="font-size:10px;color:var(--hint);margin-top:6px;text-align:center;">Все системы работают по времени. Без заправки эффект пропадает.</div>
       `;
       const list = document.getElementById('room-list');
       if (!list) return;
@@ -6265,8 +6443,8 @@
       ROOM_UPGRADES.forEach(u => {
         let bought = false;
         if (u.type === 'vent' && (state.room.ventOwned || state.room.vent)) bought = true;
-        if (u.type === 'auto' && state.room.auto) bought = true;
-        if (u.type === 'heater' && state.room.heater) bought = true;
+        if (u.type === 'auto' && (state.room.autoOwned || state.room.auto)) bought = true;
+        if (u.type === 'heater' && (state.room.heaterOwned || state.room.heater)) bought = true;
         const c = document.createElement('div');
         c.className = 'card';
         c.style.opacity = bought ? '0.5' : '1';
@@ -7740,6 +7918,21 @@
     window.tutorialSkip = tutorialSkip;
 
 
+    
+    try {
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        if (Telegram.WebApp.disableVerticalSwipes) {
+          try { Telegram.WebApp.disableVerticalSwipes(); } catch (e) {}
+        }
+        // стабильный viewport на iPhone
+        if (Telegram.WebApp.setHeaderColor) {
+          try { Telegram.WebApp.setHeaderColor('#0f1812'); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+
     console.log('Fermarast ' + APP_VERSION);
     try {
       if (typeof applyOfflineProgress === 'function') applyOfflineProgress();
@@ -7806,6 +7999,10 @@
     window.upgradePot = upgradePot;
     window.toggleVent = toggleVent;
     window.replaceVentFilter = replaceVentFilter;
+    window.toggleAuto = toggleAuto;
+    window.refillAuto = refillAuto;
+    window.toggleHeater = toggleHeater;
+    window.refillHeater = refillHeater;
     window.openBribeModal = openBribeModal;
     window.payProactiveBribe = payProactiveBribe;
     window.toggleReggae = toggleReggae;
