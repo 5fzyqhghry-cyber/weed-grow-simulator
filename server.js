@@ -955,6 +955,59 @@ app.get('/health', (req, res) => {
   });
 });
 
+
+// ========== КЛАНЫ (ТЕПЛИЦЫ) ==========
+const CLAN_FILE = path.join(DATA_DIR, 'clans.json');
+function loadClans() {
+  try {
+    if (fs.existsSync(CLAN_FILE)) return JSON.parse(fs.readFileSync(CLAN_FILE, 'utf8'));
+  } catch (e) {}
+  return {};
+}
+function saveClans(c) {
+  try { fs.writeFileSync(CLAN_FILE, JSON.stringify(c, null, 2), 'utf8'); } catch (e) {}
+}
+
+app.post('/api/clan/create', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const name = String(req.body?.name || '').trim().slice(0, 24);
+    const userName = String(req.body?.userName || 'Игрок').slice(0, 32);
+    if (!userId || name.length < 2) return res.status(400).json({ success: false, error: 'name' });
+    const clans = loadClans();
+    const key = name.toLowerCase();
+    if (clans[key]) return res.json({ success: false, error: 'Имя занято' });
+    const id = 'clan_' + Date.now().toString(36);
+    clans[key] = { id, name, owner: userId, members: [userId], names: { [userId]: userName }, createdAt: Date.now() };
+    saveClans(clans);
+    res.json({ success: true, clanId: id, name });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'server' });
+  }
+});
+
+app.post('/api/clan/join', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const name = String(req.body?.name || '').trim().slice(0, 24);
+    const userName = String(req.body?.userName || 'Игрок').slice(0, 32);
+    if (!userId || name.length < 2) return res.status(400).json({ success: false, error: 'name' });
+    const clans = loadClans();
+    const key = name.toLowerCase();
+    const clan = clans[key];
+    if (!clan) return res.json({ success: false, error: 'Теплица не найдена' });
+    if (clan.members.length >= 10) return res.json({ success: false, error: 'Мест нет (макс 10)' });
+    if (!clan.members.includes(userId)) clan.members.push(userId);
+    if (!clan.names) clan.names = {};
+    clan.names[userId] = userName;
+    saveClans(clans);
+    res.json({ success: true, clanId: clan.id, name: clan.name, members: clan.members.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'server' });
+  }
+});
+
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend v3 on port ${PORT}, data: ${DB_FILE}`);
 });
