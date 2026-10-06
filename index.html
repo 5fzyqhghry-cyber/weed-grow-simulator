@@ -2298,7 +2298,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.1-fix · 06.10';
+    const APP_VERSION = 'v5.9.2-fix · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -2315,6 +2315,9 @@
     const tg = window.Telegram?.WebApp;
     let adminAuthed = false;
     let godMode = false;
+    // QoL globals (must exist before any render)
+    var farmCompact = false;
+    var invSortMode = 'qty';
 
     // Стабильный ID: Telegram → localStorage → новый guest
     let userId = null;
@@ -6102,10 +6105,21 @@
     // ============================================================
     function renderFarm() {
       const grid = document.getElementById('farm-grid');
-      if (grid && farmCompact) grid.classList.add('farm-compact');
-      else if (grid) grid.classList.remove('farm-compact');
       if (!grid) return;
+      try {
+        if (typeof farmCompact !== 'undefined' && farmCompact) grid.classList.add('farm-compact');
+        else grid.classList.remove('farm-compact');
+      } catch (e) {}
       grid.innerHTML = '';
+      if (!state.pots || !Array.isArray(state.pots)) state.pots = [];
+      if (state.pots.length === 0) {
+        // аварийно создаём 1 горшок
+        state.pots.push({
+          id: 1, strain: null, plantedAt: null, water: 80, health: 100, stage: 0,
+          disease: false, pests: false, potLevel: 1, isActive: true, lamp: null, fert: null
+        });
+        state.nextPotId = 2;
+      }
       if (state.pots.length === 0) {
         grid.innerHTML = '<div class="empty"><div class="empty-emoji">🪴</div>Нет горшков</div>';
         document.getElementById('btn-buy-pot').textContent = '➕ Купить горшок';
@@ -6137,7 +6151,7 @@
         } else {
           const s = getStrain(pot.strain);
           const prog = getProgress(pot);
-          const left = Math.max(0, Math.ceil(getEffectiveTime(pot) - (Date.now() - pot.plantedAt) / 1000));
+          const left = Math.max(0, Math.ceil(getEffectiveTime(pot) || 0));
           updatePotStage(pot);
           updateTHC(pot);
           const ready = prog >= 1;
@@ -6290,15 +6304,18 @@
       }
       document.getElementById('btn-sell-all').style.display = 'block';
       // sort
+      try {
+      const mode = (typeof invSortMode !== 'undefined') ? invSortMode : 'qty';
       entries.sort((a, b) => {
-        if (invSortMode === 'name') return String(a[0]).localeCompare(String(b[0]));
-        if (invSortMode === 'price') {
+        if (mode === 'name') return String(a[0]).localeCompare(String(b[0]));
+        if (mode === 'price') {
           const pa = getMarketPrice(a[0].split('_')[0]) || 0;
           const pb = getMarketPrice(b[0].split('_')[0]) || 0;
           return pb - pa;
         }
         return (b[1] || 0) - (a[1] || 0);
       });
+      } catch (e) {}
       list.innerHTML = '';
       entries.forEach(([id, amt]) => {
         const s = getStrain(id);
@@ -6694,14 +6711,14 @@
         if (typeof renderWeeklyGoal === 'function') renderWeeklyGoal();
         if (typeof renderClan === 'function') renderClan();
         if (typeof renderActivityFeed === 'function') renderActivityFeed();
-      } catch (e) {}
+      } catch (e) { console.warn('render extras', e); }
 
-      renderHeader();
-      renderFarm();
-      renderMarket();
-      renderShop();
-      renderInventory();
-      renderProcess();
+      try { renderHeader(); } catch (e) { console.warn('header', e); }
+      try { renderFarm(); } catch (e) { console.warn('farm', e); }
+      try { renderMarket(); } catch (e) { console.warn('market', e); }
+      try { renderShop(); } catch (e) { console.warn('shop', e); }
+      try { renderInventory(); } catch (e) { console.warn('inv', e); }
+      try { renderProcess(); } catch (e) { console.warn('process', e); }
       renderRoom();
       renderProfile();
       renderFriends();
