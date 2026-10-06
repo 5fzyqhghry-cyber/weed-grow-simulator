@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.06-v597">
+  <meta name="app-version" content="2026.10.06-v5910">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -1904,6 +1904,199 @@
       pointer-events: none !important;
     }
 
+  
+    /* ===== Единый стиль кнопок (теплица) ===== */
+    .btn {
+      background: linear-gradient(180deg, #4d8f4a 0%, #356b38 55%, #2d5a30 100%) !important;
+      color: #f4f7ef !important;
+      border: 1px solid rgba(180, 210, 150, 0.28) !important;
+      border-radius: 12px !important;
+      padding: 9px 14px !important;
+      font-size: 12px !important;
+      font-weight: 650 !important;
+      letter-spacing: 0.01em !important;
+      box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 220, 0.14) !important;
+      min-height: 40px !important;
+      transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    .btn:active {
+      transform: scale(0.97) !important;
+      filter: brightness(0.9) !important;
+    }
+    .btn:disabled {
+      opacity: 0.4 !important;
+      filter: grayscale(0.35) !important;
+      box-shadow: none !important;
+    }
+    /* Вторичные — спокойный тёмный */
+    .btn-secondary {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%) !important;
+      color: var(--text) !important;
+      border: 1px solid rgba(160, 175, 150, 0.22) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05) !important;
+    }
+    /* Полив / вода */
+    .btn-blue {
+      background: linear-gradient(180deg, #4a8fb8 0%, #356a8a 100%) !important;
+      border-color: rgba(140, 190, 220, 0.3) !important;
+      color: #eef6fb !important;
+      box-shadow: 0 3px 10px rgba(40, 90, 120, 0.3), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+    /* Предупреждение / сушка — тёплый янтарный, не кислотный */
+    .btn-warning {
+      background: linear-gradient(180deg, #c9a04a 0%, #9a7530 100%) !important;
+      color: #1a1408 !important;
+      border-color: rgba(230, 200, 120, 0.35) !important;
+      box-shadow: 0 3px 10px rgba(100, 70, 20, 0.25), inset 0 1px 0 rgba(255,255,220,0.2) !important;
+    }
+    /* Акцент (скрестить / редкое) — приглушённый шалфей-фиолетовый */
+    .btn-purple {
+      background: linear-gradient(180deg, #6b6a8a 0%, #4a4968 100%) !important;
+      color: #f0eef8 !important;
+      border-color: rgba(180, 175, 210, 0.28) !important;
+      box-shadow: 0 3px 10px rgba(40, 35, 70, 0.3), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+    }
+    /* Награда / забрать — мягкое золото */
+    .btn-gold {
+      background: linear-gradient(180deg, #d4b45c 0%, #a88838 100%) !important;
+      color: #1a1508 !important;
+      border-color: rgba(240, 210, 120, 0.4) !important;
+      box-shadow: 0 3px 12px rgba(120, 90, 20, 0.28), inset 0 1px 0 rgba(255,255,230,0.25) !important;
+    }
+    /* Инвестиции — тот же зелёный акцент, без розового */
+    .btn-pink {
+      background: linear-gradient(180deg, #5a8f6a 0%, #3d6b4a 100%) !important;
+      color: #f2f8f2 !important;
+      border-color: rgba(160, 200, 160, 0.3) !important;
+      box-shadow: 0 3px 10px rgba(30, 60, 40, 0.3), inset 0 1px 0 rgba(255,255,220,0.12) !important;
+    }
+    /* Полиция */
+    .btn-police {
+      background: linear-gradient(180deg, #3a4568 0%, #252d48 100%) !important;
+      color: #e8ecf5 !important;
+      border-color: rgba(140, 160, 200, 0.28) !important;
+      box-shadow: 0 3px 10px rgba(20, 25, 50, 0.35), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+    }
+    .btn-small {
+      padding: 6px 10px !important;
+      font-size: 11px !important;
+      min-height: 34px !important;
+      border-radius: 10px !important;
+    }
+    .btn-full {
+      width: 100% !important;
+    }
+    /* Регистрация */
+    .btn-register {
+      background: linear-gradient(180deg, #4d8f4a 0%, #2d5a30 100%) !important;
+      color: #fff !important;
+      font-weight: 700 !important;
+    }
+    /* Панель «Ещё» на ферме */
+    #farm-more-panel {
+      display: none;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      padding: 10px !important;
+      background: rgba(12, 18, 14, 0.55) !important;
+      border-radius: 14px !important;
+      border: 1px solid rgba(160, 180, 140, 0.14) !important;
+    }
+    #farm-more-panel .btn {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 120px;
+    }
+    /* Карточки — чуть ровнее кнопки внутри */
+    .card .btn-small {
+      min-width: 72px;
+    }
+
+  
+    /* Таймеры цеха — крупные и заметные */
+    .process-queue-wrap {
+      margin-bottom: 12px;
+    }
+    .process-timer-card {
+      background: linear-gradient(145deg, rgba(40, 52, 36, 0.98), rgba(18, 24, 18, 0.98)) !important;
+      border: 1px solid rgba(160, 200, 120, 0.28) !important;
+      border-radius: 16px !important;
+      padding: 14px 12px !important;
+      margin-bottom: 8px !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35) !important;
+    }
+    .process-timer-title {
+      font-size: 13px;
+      font-weight: 750;
+      margin-bottom: 10px;
+      color: #c8e6c0;
+      letter-spacing: 0.02em;
+    }
+    .process-job {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      margin: 6px 0;
+      background: rgba(0,0,0,0.28);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .process-job-emoji {
+      font-size: 28px;
+      line-height: 1;
+      width: 36px;
+      text-align: center;
+    }
+    .process-job-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .process-job-name {
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .process-job-sub {
+      font-size: 10px;
+      color: var(--hint);
+      margin-bottom: 6px;
+    }
+    .process-job-time {
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #ffe082;
+      letter-spacing: 0.03em;
+      min-width: 64px;
+      text-align: right;
+    }
+    .process-job-bar {
+      height: 8px !important;
+      border-radius: 999px !important;
+      background: rgba(255,255,255,0.08) !important;
+      overflow: hidden;
+    }
+    .process-job-bar .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6aaa4a, #c6e86a) !important;
+      transition: width 0.4s linear;
+    }
+    .process-job.almost .process-job-time {
+      color: #a5d6a7;
+      animation: timerPulse 1s ease-in-out infinite;
+    }
+    @keyframes timerPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+
   </style>
 </head>
 <body>
@@ -2091,7 +2284,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.7 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.10 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2133,6 +2326,7 @@
     </div>
 
     <div class="section" id="section-process">
+      <div id="process-queues" class="process-queue-wrap"></div>
       <div class="section-title">⚗️ Переработка</div>
       <div class="card-list" id="process-list"></div>
       <div class="section-title" style="margin-top:10px;">🍃 Готовая продукция</div>
@@ -2382,7 +2576,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.7 · 06.10';
+    const APP_VERSION = 'v5.9.10-timers · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -3106,26 +3300,58 @@
       render();
     }
 
-    function save() {
-      state.lastUpdate = Date.now();
-      state.money = Math.max(0, Math.floor(Number(state.money) || 0));
-      state.energy = Math.max(0, Math.min(state.maxEnergy || 100, Math.floor(Number(state.energy) || 0)));
-      state.heat = Math.max(0, Math.min(100, Number(state.heat) || 0));
-      try { localStorage.setItem('grow_sim_v4_' + userId, JSON.stringify(state)); } catch (e) {}
-      if (state.registered) {
-        try {
+    let _lastSaveAt = 0;
+    let _saveTimer = null;
+    let _saveDirty = false;
+
+    function save(force) {
+      // force=true — сразу; иначе throttle ~2.5с (меньше лагов на iPhone)
+      if (!force) {
+        _saveDirty = true;
+        const now = Date.now();
+        if (now - _lastSaveAt < 2500) {
+          if (!_saveTimer) {
+            _saveTimer = setTimeout(function() {
+              _saveTimer = null;
+              if (_saveDirty) save(true);
+            }, 2500 - (now - _lastSaveAt));
+          }
+          return;
+        }
+      }
+      _saveDirty = false;
+      _lastSaveAt = Date.now();
+      try {
+        state.lastUpdate = Date.now();
+        state.money = Math.max(0, Math.floor(Number(state.money) || 0));
+        // Энергию не режем жёстко при сохранении старых сейвов — только отображение
+        state.energy = Math.max(0, Number(state.energy) || 0);
+        state.heat = Math.max(0, Math.min(100, Number(state.heat) || 0));
+        localStorage.setItem('grow_sim_v4_' + userId, JSON.stringify(state));
+        if (state.registered) {
           const publicData = {
             money: state.money,
             level: state.level,
-            energy: state.energy,
+            energy: Math.floor(state.energy),
             heat: state.heat,
             username: getUserName(),
             lastActive: Date.now()
           };
           localStorage.setItem('grow_sim_public_' + userId, JSON.stringify(publicData));
-        } catch (e) {}
+        }
+      } catch (e) {
+        console.warn('save failed', e);
       }
     }
+
+    // На закрытие мини-аппа — принудительный сейв
+    try {
+      window.addEventListener('pagehide', function() { save(true); });
+      window.addEventListener('beforeunload', function() { save(true); });
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') save(true);
+      });
+    } catch (e) {}
 
     function load() {
       try {
@@ -5023,7 +5249,9 @@
       }
       if (changed) {
         save();
-        if (typeof renderProcess === 'function') renderProcess();
+        if (typeof renderProcessQueues === 'function') renderProcessQueues();
+        const procTab = document.querySelector('.tab[data-tab="process"].active');
+        if (procTab && typeof renderProcess === 'function') renderProcess();
         if (typeof renderInventory === 'function') renderInventory();
         if (typeof renderHeader === 'function') renderHeader();
       }
@@ -6443,7 +6671,62 @@
       });
     }
 
+    
+    function formatProcessTime(sec) {
+      sec = Math.max(0, Math.floor(sec || 0));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+    function renderProcessQueues() {
+      const box = document.getElementById('process-queues');
+      if (!box) return;
+      const dry = (state.dryQueue || []).filter(j => !j.done);
+      const craft = (state.craftQueue || []).filter(j => !j.done);
+      if (!dry.length && !craft.length) {
+        box.innerHTML = '';
+        return;
+      }
+      function jobHtml(j, kind) {
+        const left = Math.max(0, Math.ceil((j.duration - (Date.now() - j.startedAt)) / 1000));
+        const pct = Math.min(100, Math.floor(((Date.now() - j.startedAt) / j.duration) * 100));
+        const s = getStrain(j.strainId);
+        let emoji = '⏳', name = '', sub = '';
+        if (kind === 'dry') {
+          emoji = '🍂';
+          name = (s ? s.emoji + ' ' + s.name : j.strainId) + ' · сушка';
+          sub = '×' + j.qty + ' · слот сушилки';
+        } else {
+          const p = PRODUCTS[j.productType];
+          emoji = (p && p.emoji) || '🧪';
+          name = ((p && p.name) || j.productType) + (s ? ' · ' + s.name : '');
+          sub = '×' + j.qty + ' · в работе';
+        }
+        const almost = left <= 30 ? ' almost' : '';
+        return `<div class="process-job${almost}">
+          <div class="process-job-emoji">${emoji}</div>
+          <div class="process-job-body">
+            <div class="process-job-name">${name}</div>
+            <div class="process-job-sub">${sub}</div>
+            <div class="process-job-bar bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="process-job-time">${formatProcessTime(left)}</div>
+        </div>`;
+      }
+      let htmlQ = '';
+      if (dry.length) {
+        htmlQ += `<div class="process-timer-card"><div class="process-timer-title">🍂 Сушилка · ${dry.length} парт.</div>` +
+          dry.map(j => jobHtml(j, 'dry')).join('') + '</div>';
+      }
+      if (craft.length) {
+        htmlQ += `<div class="process-timer-card"><div class="process-timer-title">🧪 Цех · ${craft.length} парт.</div>` +
+          craft.map(j => jobHtml(j, 'craft')).join('') + '</div>';
+      }
+      box.innerHTML = htmlQ;
+    }
+
     function renderProcess() {
+      try { renderProcessQueues(); } catch (e) {}
       const list = document.getElementById('process-list');
       if (!list) return;
       list.innerHTML = '';
@@ -6471,35 +6754,6 @@
           list.appendChild(c);
         });
       }
-      // Очередь цеха (сушка + переработка)
-      if (state.craftQueue && state.craftQueue.some(j => !j.done)) {
-        const qCard = document.createElement('div');
-        qCard.className = 'card';
-        const lines = state.craftQueue.filter(j => !j.done).map(j => {
-          const left = Math.max(0, Math.ceil((j.duration - (Date.now() - j.startedAt)) / 1000));
-          const p = PRODUCTS[j.productType];
-          const s = getStrain(j.strainId);
-          const pct = Math.min(100, Math.floor(((Date.now() - j.startedAt) / j.duration) * 100));
-          return `<div style="font-size:11px;margin:4px 0;">${(p&&p.emoji)||'⏳'} ${(p&&p.name)||''} ${(s&&s.name)||''} ×${j.qty} — <b>${left > 60 ? Math.ceil(left/60)+'м' : left+'с'}</b>
-            <div class="bar" style="height:4px;margin-top:2px;"><div class="bar-fill growth" style="width:${pct}%"></div></div></div>`;
-        }).join('');
-        qCard.innerHTML = `<div class="card-emoji">⚙️</div><div class="card-info"><div class="card-title">В работе</div>${lines}</div>`;
-        list.appendChild(qCard);
-      }
-      if (state.dryQueue && state.dryQueue.some(j => !j.done)) {
-        const qCard = document.createElement('div');
-        qCard.className = 'card';
-        const lines = state.dryQueue.filter(j => !j.done).map(j => {
-          const left = Math.max(0, Math.ceil((j.duration - (Date.now() - j.startedAt)) / 1000));
-          const s = getStrain(j.strainId);
-          const pct = Math.min(100, Math.floor(((Date.now() - j.startedAt) / j.duration) * 100));
-          return `<div style="font-size:11px;margin:4px 0;">🍂 ${(s&&s.name)||j.strainId} ×${j.qty} — <b>${left}с</b>
-            <div class="bar" style="height:4px;margin-top:2px;"><div class="bar-fill growth" style="width:${pct}%"></div></div></div>`;
-        }).join('');
-        qCard.innerHTML = `<div class="card-emoji">⏳</div><div class="card-info"><div class="card-title">Сушилка</div>${lines}</div>`;
-        list.appendChild(qCard);
-      }
-
       const dried = Object.entries(state.inventory).filter(([k, v]) => v > 0 && k.endsWith('_dried'));
       dried.forEach(([key, amt]) => {
         const info = getProductInfo(key);
@@ -7732,25 +7986,34 @@
       });
     });
 
+    let _tickN = 0;
     setInterval(() => {
-      if (state.energy < state.maxEnergy) {
-        // ~1⚡ / 4–5 сек — не бесконечный спам посадки
-        const boost = (state.energy < state.maxEnergy * 0.15) ? 0.28 : 0.18;
-        state.energy = Math.min(state.maxEnergy, state.energy + boost);
+      try {
+        _tickN++;
+        if (state.energy < state.maxEnergy) {
+          const boost = (state.energy < state.maxEnergy * 0.15) ? 0.28 : 0.18;
+          state.energy = Math.min(state.maxEnergy, state.energy + boost);
+        }
+        tickPots();
+        tickDryQueue();
+        if (_tickN % 2 === 0) checkPests();
+        updateMarketPrices();
+        if (_tickN % 4 === 0) trySpawnSnoop();
+        renderHeader();
+        // ферма каждый тик — таймеры/вода; остальные экраны реже
+        const farmTab = document.querySelector('.tab[data-tab="farm"].active');
+        if (farmTab || _tickN % 2 === 0) renderFarm();
+        const procTab = document.querySelector('.tab[data-tab="process"].active');
+        if (procTab && typeof renderProcessQueues === 'function') renderProcessQueues();
+        if (_tickN % 3 === 0) renderMarket();
+        updateBonusTimer();
+        updateGameTime();
+        if (_tickN % 3 === 0) updateWeather();
+        save(false); // throttle
+        if (_tickN % 20 === 0) syncWithServer(); // ~30 сек вместо каждого тика
+      } catch (e) {
+        console.warn('tick error', e);
       }
-      tickPots();
-      tickDryQueue();
-      checkPests();
-      updateMarketPrices();
-      trySpawnSnoop();
-      renderHeader();
-      renderFarm();
-      renderMarket();
-      updateBonusTimer();
-      updateGameTime();
-      updateWeather();
-      save();
-      syncWithServer();
     }, 1500);
 
     setInterval(() => {
