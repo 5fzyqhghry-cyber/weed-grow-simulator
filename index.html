@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.06-v5912">
+  <meta name="app-version" content="2026.10.06-v5913">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2482,7 +2482,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.12 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.13 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2774,7 +2774,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.12-hud · 06.10';
+    const APP_VERSION = 'v5.9.13-offline · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -3547,7 +3547,10 @@
       window.addEventListener('pagehide', function() { save(true); });
       window.addEventListener('beforeunload', function() { save(true); });
       document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden') save(true);
+        if (document.visibilityState === 'hidden') {
+          try { schedulePlantNotifications(); } catch (e) {}
+          save(true);
+        }
       });
     } catch (e) {}
 
@@ -6665,6 +6668,12 @@
           updatePotStage(pot);
           updateTHC(pot);
           const ready = prog >= 1;
+          if (ready && !pot.ripeAt) pot.ripeAt = Date.now();
+          let dieLeft = '';
+          if (ready && pot.ripeAt) {
+            const leftDie = Math.max(0, Math.ceil((RIPE_DIE_SEC * 1000 - (Date.now() - pot.ripeAt)) / 1000));
+            dieLeft = leftDie > 0 ? (' · ⏳ гибель через ' + formatTime(leftDie)) : ' · 🥀 гибнет!';
+          }
           let tags = '';
           if (pot.disease) tags += ' 🦠';
           if (pot.pests) tags += pot.pestType === 'mite' ? ' 🕸' : ' 🐛';
@@ -6702,7 +6711,7 @@
                 <div class="pot-emoji">${pot.isActive ? (STAGE_EMOJI[pot.stage] || '🌱') : '🔒'}</div>
                 <div class="pot-name">${pot.isActive ? (s?.emoji + ' ' + s?.name + tags) : '🔒 Закрыт'}</div>
                 ${pot.isActive ? thcDisplay : ''}
-                <div class="pot-status">${pot.isActive ? (ready ? '✅ Готово!' : STAGE_NAMES[pot.stage] + ' · ' + formatTime(left)) : 'Недоступен'}</div>
+                <div class="pot-status">${pot.isActive ? (ready ? ('✅ Готово!' + (typeof dieLeft !== 'undefined' ? dieLeft : '')) : STAGE_NAMES[pot.stage] + ' · ' + formatTime(left)) : 'Недоступен'}</div>
                 ${pot.isActive ? `<div class="plant-container" style="cursor:pointer;touch-action:manipulation;" onclick="tapPlant(${pot.id})">${getPlantSVG(pot.strain, pot.stage, pot.health, pot.disease, ready, pot.pests ? (pot.pestType || true) : false, pot.thc, pot.water)}</div>` : ''}
                 ${pot.isActive ? `
                 <div class="bars">
@@ -8199,6 +8208,7 @@
           state.energy = Math.min(state.maxEnergy, state.energy + boost);
         }
         tickPots();
+        if (typeof checkRipeDeathOnline === 'function') checkRipeDeathOnline();
         tickDryQueue();
         if (_tickN % 2 === 0) checkPests();
         updateMarketPrices();
@@ -8454,35 +8464,188 @@
       } else showToast('Нечего поливать или мало ⚡', true);
     }
 
-    /** Оффлайн-рост до 6 часов */
+    /** Оффлайн: рост, палево, гибель перезрелых, очереди цеха */
+    const OFFLINE_CAP_SEC = 12 * 3600;       // симулируем до 12ч
+    const RIPE_DIE_SEC = 90 * 60;            // 90 мин после готовности — куст гибнет
+    const OFFLINE_HEAT_PER_MIN = 1;          // −1% палево / реальная минута оффлайн
+
+    function clearPotPlantOffline(pot, reason) {
+      if (!pot) return;
+      pot.strain = null;
+      pot.plantedAt = null;
+      pot.stage = 0;
+      pot.growthProgress = 0;
+      pot.thc = 0;
+      pot.pests = false;
+      pot.disease = false;
+      pot.ripeAt = null;
+      pot.notifiedReady = false;
+      pot.health = Math.min(100, pot.health || 100);
+      if (reason) pushFeed && pushFeed(reason);
+    }
+
     function applyOfflineProgress() {
-      if (state.offlineApplied) return;
+      // один раз за сессию
+      if (state._offlineDoneSession) return;
+      state._offlineDoneSession = true;
+
       const last = state.lastTick || state.lastUpdate || Date.now();
       let dt = (Date.now() - last) / 1000;
-      if (dt < 30) return;
-      const cap = 6 * 3600; // 6 часов
-      dt = Math.min(dt, cap);
-      let grew = 0;
+      if (dt < 20) {
+        state.lastTick = Date.now();
+        return;
+      }
+      const fullDt = dt;
+      dt = Math.min(dt, OFFLINE_CAP_SEC);
+
+      // —— Палево: −1% за каждую реальную минуту оффлайна ——
+      const heatDrop = Math.floor(fullDt / 60) * OFFLINE_HEAT_PER_MIN;
+      if (heatDrop > 0 && (state.heat || 0) > 0) {
+        state.heat = Math.max(0, (state.heat || 0) - heatDrop);
+      }
+
+      let grew = 0, readyN = 0, deadN = 0;
+      const step = 30;
+      const steps = Math.min(400, Math.max(1, Math.floor(dt / step)));
+
       (state.pots || []).forEach(p => {
         if (!p.strain || !p.plantedAt) return;
+        const s = getStrain(p.strain);
+        const name = s ? (s.emoji + ' ' + s.name) : 'куст';
         const before = getProgress(p);
-        // упрощённый тик: вода чуть падает, рост копится
-        const steps = Math.min(120, Math.floor(dt / 30));
-        for (let i = 0; i < steps; i++) {
-          if (typeof advanceGrowth === 'function') advanceGrowth(p, 30);
-          p.water = Math.max(5, (p.water || 50) - 0.8);
+
+        // Если уже был готов до выхода — считаем от ripeAt
+        if ((p.growthProgress || 0) >= 1 || before >= 1) {
+          if (!p.ripeAt) p.ripeAt = p.plantedAt ? (p.plantedAt + (s ? s.baseTime * 1000 : 0)) : last;
         }
-        if (getProgress(p) > before + 0.01) grew++;
+
+        for (let i = 0; i < steps; i++) {
+          if ((p.growthProgress || 0) >= 1) break;
+          // вода уходит
+          let drain = 0.7;
+          if ((p.stage || 0) >= 4) drain = 1.2;
+          else if ((p.stage || 0) >= 3) drain = 1.0;
+          if (typeof isAutoRunning === 'function' && isAutoRunning()) drain *= 0.35;
+          p.water = Math.max(0, (p.water || 50) - drain * (step / 1.5));
+          if ((p.water || 0) < 10) p.health = Math.max(0, (p.health || 100) - 0.15 * step);
+          if (typeof advanceGrowth === 'function') advanceGrowth(p, step);
+          if (typeof updatePotStage === 'function') updatePotStage(p);
+          if (getProgress(p) >= 1) {
+            p.growthProgress = 1;
+            p.stage = 5;
+            if (!p.ripeAt) p.ripeAt = last + (i + 1) * step * 1000;
+            break;
+          }
+        }
+
+        const prog = getProgress(p);
+        if (prog > before + 0.01) grew++;
+
+        // Готовность
+        if (prog >= 1) {
+          if (!p.ripeAt) p.ripeAt = Date.now() - Math.min(dt, fullDt) * 500; // приблизительно
+          readyN++;
+          // Гибель, если не собрали слишком долго
+          const ripeFor = (Date.now() - (p.ripeAt || Date.now())) / 1000;
+          // учитываем оффлайн: если ripeAt + RIPE_DIE < now
+          if (ripeFor >= RIPE_DIE_SEC || (p.ripeAt && Date.now() - p.ripeAt >= RIPE_DIE_SEC * 1000)) {
+            clearPotPlantOffline(p, '🥀 ' + name + ' погиб — не собрали вовремя');
+            deadN++;
+            readyN--;
+          }
+        }
       });
-      // сушка / крафт тоже
-      if (typeof tickDryQueue === 'function') tickDryQueue();
-      state.offlineApplied = true;
+
+      // Очереди сушки/цеха — прокрутить время
+      try {
+        const now = Date.now();
+        (state.dryQueue || []).forEach(j => {
+          if (j.done) return;
+          // startedAt в прошлом — tickDryQueue подхватит
+          if (now - j.startedAt >= j.duration) { /* ok */ }
+        });
+        if (typeof tickDryQueue === 'function') tickDryQueue();
+      } catch (e) {}
+
       state.lastTick = Date.now();
-      if (grew > 0) {
-        const mins = Math.floor(dt / 60);
-        showToast('🌙 Пока тебя не было (~' + mins + 'м): подросли кусты ×' + grew);
-      }
-      save();
+      state.lastUpdate = Date.now();
+      state.lastHeatCheck = Date.now();
+      state._heatMinuteAcc = 0;
+
+      const mins = Math.floor(fullDt / 60);
+      let msg = '🌙 Оффлайн ~' + mins + 'м';
+      if (heatDrop > 0) msg += ' · палево −' + heatDrop + '%';
+      if (grew > 0) msg += ' · рост ×' + grew;
+      if (readyN > 0) msg += ' · готово ' + readyN;
+      if (deadN > 0) msg += ' · погибло ' + deadN;
+      if (mins >= 1) showToast(msg + (deadN > 0 ? ' — собирай вовремя!' : ''), deadN > 0);
+
+      // Запланировать пуши на сервере (если есть BOT_TOKEN)
+      try { schedulePlantNotifications(); } catch (e) {}
+      save(true);
+      if (typeof render === 'function') render();
+    }
+
+    /** Уведомления: когда куст дозреет — бот напишет (нужен TELEGRAM_BOT_TOKEN на Amvera) */
+    function schedulePlantNotifications() {
+      if (!userId || String(userId).startsWith('guest_')) return;
+      const jobs = [];
+      const now = Date.now();
+      (state.pots || []).forEach(p => {
+        if (!p.strain || !p.plantedAt) return;
+        const s = getStrain(p.strain);
+        if (!s) return;
+        const prog = getProgress(p);
+        if (prog >= 1) {
+          if (!p.notifiedReady) {
+            jobs.push({
+              potId: p.id,
+              strain: s.name,
+              emoji: s.emoji,
+              readyAt: now,
+              dieAt: now + RIPE_DIE_SEC * 1000,
+              type: 'ready'
+            });
+          }
+          return;
+        }
+        // оценка времени до готовности
+        const left = typeof getEffectiveTime === 'function' ? getEffectiveTime(p) : (s.baseTime * (1 - prog));
+        const readyAt = now + Math.max(5, left) * 1000;
+        jobs.push({
+          potId: p.id,
+          strain: s.name,
+          emoji: s.emoji,
+          readyAt: readyAt,
+          dieAt: readyAt + RIPE_DIE_SEC * 1000,
+          type: 'schedule'
+        });
+      });
+      if (!jobs.length) return;
+      fetch((SERVER_URL || '') + '/api/notify/plants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: String(userId), plants: jobs })
+      }).catch(function() {});
+    }
+
+    // В тике: пометить ripeAt и убить просроченные
+    function checkRipeDeathOnline() {
+      const now = Date.now();
+      let changed = false;
+      (state.pots || []).forEach(p => {
+        if (!p.strain || !p.plantedAt) return;
+        if (getProgress(p) < 1) return;
+        if (!p.ripeAt) p.ripeAt = now;
+        if (now - p.ripeAt >= RIPE_DIE_SEC * 1000) {
+          const s = getStrain(p.strain);
+          const name = s ? (s.emoji + ' ' + s.name) : 'Куст';
+          clearPotPlantOffline(p, '🥀 ' + name + ' завял — слишком долго ждал сбора');
+          showToast('🥀 ' + name + ' погиб без сбора', true);
+          changed = true;
+        }
+      });
+      if (changed) { save(true); if (typeof renderFarm === 'function') renderFarm(); }
     }
 
     function pushFeed(text) {
