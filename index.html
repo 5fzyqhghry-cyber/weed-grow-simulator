@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.06-v5910">
+  <meta name="app-version" content="2026.10.06-v5912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -111,7 +111,8 @@
           rgba(45, 35, 22, 0.35) 40%,
           rgba(35, 25, 15, 0.55) 100%);
     }
-    .header, .tabs, .content { position: relative; z-index: 1; }
+    .header, .content { position: relative; z-index: 1; }
+    /* .tabs must stay position:fixed — do not set relative here */
 
     /* ========== РЕАЛИСТИЧНОЕ ОСВЕЩЕНИЕ И ТЕНИ ========== */
     :root {
@@ -1638,7 +1639,7 @@
     }
     .tabs::-webkit-scrollbar { display: none !important; }
     .content {
-      padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
     }
     body {
       padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
@@ -2097,6 +2098,179 @@
       50% { opacity: 0.65; }
     }
 
+  
+    /* Ферма: горшки крутятся внутри, низ всегда на экране */
+    #section-farm .farm-grid {
+      max-height: min(52vh, 480px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      padding-bottom: 8px !important;
+      margin-bottom: 4px !important;
+      scroll-behavior: smooth;
+      border-radius: 14px;
+      border: 1px solid rgba(140, 160, 120, 0.12);
+      background: rgba(0, 0, 0, 0.15);
+      padding: 8px 6px !important;
+    }
+    #section-farm .farm-grid::-webkit-scrollbar {
+      width: 4px;
+    }
+    #section-farm .farm-grid::-webkit-scrollbar-thumb {
+      background: rgba(140, 180, 120, 0.35);
+      border-radius: 4px;
+    }
+    /* Кнопка «наверх» / к панели */
+    #fab-scroll {
+      position: fixed !important;
+      right: 12px !important;
+      bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+      z-index: 9500 !important;
+      width: 48px !important;
+      height: 48px !important;
+      border-radius: 50% !important;
+      border: 1px solid rgba(160, 200, 140, 0.35) !important;
+      background: rgba(20, 28, 22, 0.92) !important;
+      color: #c8e6c0 !important;
+      font-size: 20px !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45) !important;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 0 !important;
+      min-height: 48px !important;
+    }
+    #fab-scroll.show { display: flex !important; }
+    /* Tabs always fixed, never relative */
+    .tabs {
+      position: fixed !important;
+      z-index: 9000 !important;
+    }
+
+  
+    /* ===== HUD шапка — компактная панель ===== */
+    .header {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 8px !important;
+      padding: 10px 12px 8px !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 200 !important;
+      background: linear-gradient(180deg, rgba(22, 30, 24, 0.96) 0%, rgba(14, 20, 16, 0.94) 100%) !important;
+      backdrop-filter: blur(18px) saturate(1.2) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(1.2) !important;
+      border-bottom: 1px solid rgba(150, 170, 130, 0.2) !important;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.4) !important;
+    }
+    .hud-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .hud-money {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .hud-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--hint);
+      font-weight: 600;
+    }
+    .hud-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #b8e89a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.01em;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 58vw;
+    }
+    .hud-value #money { color: inherit; }
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .hud-right .level-badge {
+      margin: 0 !important;
+      align-self: center !important;
+      font-size: 10px !important;
+      padding: 6px 10px !important;
+    }
+    .hud-right #btn-music {
+      margin: 0 !important;
+      min-width: 36px !important;
+      width: 36px !important;
+      height: 36px !important;
+      padding: 0 !important;
+      border-radius: 10px !important;
+    }
+    .hud-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 6px !important;
+    }
+    .hud-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 7px 4px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(160, 175, 145, 0.14);
+      border-radius: 12px;
+      min-height: 48px;
+    }
+    .hud-ico {
+      font-size: 13px;
+      line-height: 1;
+      opacity: 0.9;
+    }
+    .hud-num {
+      font-size: 13px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .hud-heat .hud-num {
+      color: #ffb74d;
+    }
+    .hud-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 6px;
+      font-size: 10px;
+      color: var(--hint);
+      line-height: 1.3;
+      padding: 0 2px;
+    }
+    .hud-dot {
+      opacity: 0.4;
+    }
+    #heat-hint {
+      color: inherit !important;
+      font-size: inherit !important;
+      padding: 0 !important;
+      width: auto !important;
+    }
+    /* старые .stats/.stat больше не ломают сетку */
+    .header .stats { display: none !important; }
+
   </style>
 </head>
 <body>
@@ -2253,20 +2427,44 @@
 
   <div class="greenhouse-light" aria-hidden="true"></div>
   <div class="header">
-    <div class="stats">
-      <div class="stat">💰 <span id="money">0</span>$</div>
-      <div class="stat">⚡ <span id="energy">100</span></div>
-      <div class="stat">🏆 <span id="level">1</span></div>
-      <div class="stat">⭐ <span id="rep">0</span></div>
-      <div class="stat">👮 <span id="heat">0</span>%</div>
-      <div class="weather-display">🌤 <span id="weatherDisplay">Солнечно</span></div>
-      <div class="time-display">🕐 <span id="gameTime">12:00</span> <span id="dayPhase">☀️</span></div>
-      <div id="heat-hint" style="width:100%;font-size:10px;color:var(--hint);padding:2px 4px 0;line-height:1.3;">👮 Палево: −1%/мин · с вент. −2%/мин</div>
+    <div class="hud-top">
+      <div class="hud-money">
+        <span class="hud-label">Баланс</span>
+        <span class="hud-value"><span id="money">0</span>$</span>
+      </div>
+      <div class="hud-right">
+        <div class="level-badge" id="xp-badge">0 XP</div>
+        <button type="button" class="btn btn-small btn-secondary" id="btn-music" onclick="cycleMusic()" title="Музыка">🎵</button>
+      </div>
     </div>
-    <div class="level-badge" id="xp-badge">0 XP</div>
-    <button class="btn btn-small" id="btn-music" onclick="cycleMusic()" style="margin-left:4px;min-width:40px;padding:4px 8px;" title="Музыка">🎵</button>
+    <div class="hud-grid">
+      <div class="hud-cell">
+        <span class="hud-ico">⚡</span>
+        <span class="hud-num" id="energy">100</span>
+      </div>
+      <div class="hud-cell">
+        <span class="hud-ico">🏆</span>
+        <span class="hud-num" id="level">1</span>
+      </div>
+      <div class="hud-cell">
+        <span class="hud-ico">⭐</span>
+        <span class="hud-num" id="rep">0</span>
+      </div>
+      <div class="hud-cell hud-heat">
+        <span class="hud-ico">👮</span>
+        <span class="hud-num"><span id="heat">0</span>%</span>
+      </div>
+    </div>
+    <div class="hud-meta">
+      <span id="weatherDisplay">🌤 Солнечно</span>
+      <span class="hud-dot">·</span>
+      <span>🕐 <span id="gameTime">12:00</span> <span id="dayPhase">☀️</span></span>
+      <span class="hud-dot">·</span>
+      <span id="heat-hint">−1%/мин</span>
+    </div>
   </div>
 
+  <button type="button" id="fab-scroll" class="btn" onclick="scrollFarmTop()" title="К верху фермы">↑</button>
   <div class="tabs">
     <div class="tab active" data-tab="farm">🌱</div>
     <div class="tab" data-tab="market">📈</div>
@@ -2284,7 +2482,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.10 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.12 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2576,7 +2774,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.10-timers · 06.10';
+    const APP_VERSION = 'v5.9.12-hud · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -7045,7 +7243,13 @@
       document.getElementById('heat').textContent = Math.floor(state.heat);
       document.getElementById('xp-badge').textContent = `${state.xp}/${xpFor(state.level)} XP`;
       const w = getWeatherMult();
-      document.getElementById('weatherDisplay').textContent = w.emoji + ' ' + w.name;
+      const wd = document.getElementById('weatherDisplay');
+      if (wd) wd.textContent = w.emoji + ' ' + w.name;
+      const heatCell = document.querySelector('.hud-heat .hud-num');
+      if (heatCell) {
+        const h = Math.floor(state.heat || 0);
+        heatCell.style.color = h >= 70 ? '#ef5350' : (h >= 40 ? '#ffb74d' : '#81c784');
+      }
     }
 
     function render() {
@@ -8484,6 +8688,44 @@
           ? '👮 ' + h + '% · спад −2%/мин (вентиляция вкл)'
           : '👮 ' + h + '% · спад −1%/мин · вент. даст −2%/мин';
         el.style.color = h >= 70 ? '#f44336' : (h >= 40 ? '#ffb74d' : 'var(--hint)');
+      }
+    }
+
+    
+    function scrollFarmTop() {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const grid = document.getElementById('farm-grid');
+        if (grid) grid.scrollTo({ top: 0, behavior: 'smooth' });
+        const farm = document.getElementById('section-farm');
+        if (farm) farm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {}
+    }
+    window.scrollFarmTop = scrollFarmTop;
+
+    function updateFabScroll() {
+      const fab = document.getElementById('fab-scroll');
+      if (!fab) return;
+      const pots = (state.pots || []).length;
+      const scrolled = (window.scrollY || document.documentElement.scrollTop || 0) > 120;
+      const grid = document.getElementById('farm-grid');
+      const gridScrolled = grid && grid.scrollTop > 40;
+      if (pots >= 4 && (scrolled || gridScrolled)) fab.classList.add('show');
+      else fab.classList.remove('show');
+    }
+    try {
+      window.addEventListener('scroll', updateFabScroll, { passive: true });
+      document.addEventListener('scroll', updateFabScroll, { passive: true });
+    } catch (e) {}
+
+    function autoFarmCompact() {
+      const n = (state.pots || []).length;
+      if (n >= 6 && !farmCompact) {
+        farmCompact = true;
+        const g = document.getElementById('farm-grid');
+        if (g) g.classList.add('farm-compact');
+        const b = document.getElementById('btn-farm-compact');
+        if (b) b.textContent = '📋 Все горшки';
       }
     }
 
