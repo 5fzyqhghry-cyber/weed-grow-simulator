@@ -1008,6 +1008,106 @@ app.post('/api/clan/join', (req, res) => {
 });
 
 
+
+// ========== Telegram уведомления о растениях ==========
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || '';
+const NOTIFY_FILE = path.join(DATA_DIR, 'plant_notifies.json');
+
+function loadNotifies() {
+  try {
+    if (fs.existsSync(NOTIFY_FILE)) return JSON.parse(fs.readFileSync(NOTIFY_FILE, 'utf8'));
+  } catch (e) {}
+  return {};
+}
+function saveNotifies(data) {
+  try { fs.writeFileSync(NOTIFY_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {}
+}
+
+async function tgSend(chatId, text) {
+  if (!BOT_TOKEN || !chatId) return false;
+  try {
+    const url = 'https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+    const j = await r.json();
+    return !!(j && j.ok);
+  } catch (e) {
+    console.error('tgSend', e.message);
+    return false;
+  }
+}
+
+// Клиент при уходе/сейве шлёт расписание
+app.post('/api/notify/plants', (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '').trim();
+    const plants = Array.isArray(req.body?.plants) ? req.body.plants : [];
+    if (!userId || userId.startsWith('guest_')) {
+      return res.json({ success: false, error: 'need telegram id' });
+    }
+    const store = loadNotifies();
+    // заменяем очередь игрока
+    store[userId] = plants.slice(0, 30).map(p => ({
+      potId: p.potId,
+      strain: String(p.strain || '').slice(0, 40),
+      emoji: String(p.emoji || '🌿').slice(0, 8),
+      readyAt: Number(p.readyAt) || 0,
+      dieAt: Number(p.dieAt) || 0,
+      type: p.type || 'schedule',
+      sentReady: false,
+      sentDieWarn: false
+    }));
+    saveNotifies(store);
+    res.json({ success: true, queued: store[userId].length, bot: !!BOT_TOKEN });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'server' });
+  }
+});
+
+async function processPlantNotifies() {
+  if (!BOT_TOKEN) return;
+  const store = loadNotifies();
+  const now = Date.now();
+  let changed = false;
+  for (const userId of Object.keys(store)) {
+    const list = store[userId] || [];
+    for (const job of list) {
+      if (!job.sentReady && job.readyAt && now >= job.readyAt) {
+        const dieMin = job.dieAt ? Math.max(1, Math.round((job.dieAt - now) / 60000)) : 90;
+        const ok = await tgSend(userId,
+          (job.emoji || '🌿') + ' <b>' + (job.strain || 'Куст') + '</b> готов к сбору!\n' +
+          'Зайди в игру и собери — иначе погибнет примерно через <b>' + dieMin + ' мин</b>.'
+        );
+        if (ok) { job.sentReady = true; changed = true; }
+      }
+      // предупреждение за 20 мин до гибели
+      if (job.sentReady && !job.sentDieWarn && job.dieAt && now >= job.dieAt - 20 * 60 * 1000 && now < job.dieAt) {
+        const ok = await tgSend(userId,
+          '⚠️ ' + (job.emoji || '🌿') + ' <b>' + (job.strain || 'Куст') + '</b> скоро завянет!\n' +
+          'Осталось меньше 20 минут — собери урожай.'
+        );
+        if (ok) { job.sentDieWarn = true; changed = true; }
+      }
+    }
+    // чистим старые
+    store[userId] = list.filter(j => !j.dieAt || now < j.dieAt + 3600000);
+  }
+  if (changed) saveNotifies(store);
+}
+
+setInterval(() => { processPlantNotifies().catch(() => {}); }, 60000);
+// первый проход через 15 сек после старта
+setTimeout(() => { processPlantNotifies().catch(() => {}); }, 15000);
+
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend v3 on port ${PORT}, data: ${DB_FILE}`);
+  console.log(`Backend v3 on port ${PORT}, data: ${DB_FILE}, bot: ${BOT_TOKEN ? 'yes' : 'no'}`);
 });
