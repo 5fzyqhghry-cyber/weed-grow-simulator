@@ -43,6 +43,10 @@
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
+    html {
+      height: 100%;
+      overflow-x: hidden;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
       color: var(--text);
@@ -290,27 +294,33 @@
       100% { opacity: 1; }
     }
     .snoop-popup {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%) scale(0.8);
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      bottom: auto !important;
+      transform: translate(-50%, -50%) scale(0.85) !important;
       background: linear-gradient(145deg, #1a0d0a, #2d1a10);
       border: 2px solid #d7a86e;
       border-radius: 20px;
       padding: 18px 22px;
-      z-index: 1000;
+      z-index: 10050 !important;
       display: none;
       max-width: 340px;
-      width: 90%;
+      width: min(92vw, 340px);
       text-align: center;
-      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 16px 60px rgba(0, 0, 0, 0.92);
       opacity: 0;
-      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .snoop-popup.show {
-      display: block;
-      opacity: 1;
-      transform: translateX(-50%) scale(1);
+      display: block !important;
+      opacity: 1 !important;
+      transform: translate(-50%, -50%) scale(1) !important;
+    }
+    .snoop-overlay {
+      z-index: 10040 !important;
     }
     .snoop-popup .snoop-avatar {
       display: block;
@@ -1510,12 +1520,19 @@
     }
 
     .toast {
+      position: fixed !important;
+      top: max(72px, calc(env(safe-area-inset-top) + 56px)) !important;
+      bottom: auto !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      z-index: 10100 !important;
       background: linear-gradient(135deg, #4aad58, #2d8a3e) !important;
       border-radius: 999px !important;
       padding: 12px 20px !important;
       font-size: 13px !important;
       box-shadow: 0 8px 28px rgba(45, 140, 60, 0.45) !important;
       border: 1px solid rgba(255,255,255,0.2) !important;
+      max-width: 90vw;
     }
     .toast.error {
       background: linear-gradient(135deg, #e87060, #c04030) !important;
@@ -1589,14 +1606,14 @@
 
 
   
-    /* Bottom navigation — всегда поверх, не уезжает под край */
+    /* Bottom navigation — всегда в зоне видимости */
     .tabs {
       position: fixed !important;
-      left: 8px !important;
-      right: 8px !important;
-      bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+      left: 6px !important;
+      right: 6px !important;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
       top: auto !important;
-      z-index: 9999 !important;
+      z-index: 9000 !important;
       display: flex !important;
       flex-wrap: nowrap !important;
       overflow-x: auto !important;
@@ -1620,7 +1637,7 @@
     }
     .tabs::-webkit-scrollbar { display: none !important; }
     .content {
-      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
     }
     body {
       padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
@@ -1829,6 +1846,63 @@
       border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px;
     }
 
+  
+    /* Модалки и алерты — всегда по центру экрана, выше нижней панели */
+    .modal-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      display: none !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 10020 !important;
+      padding: 16px !important;
+      padding-top: max(24px, env(safe-area-inset-top)) !important;
+      padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+      background: rgba(0, 0, 0, 0.55) !important;
+      backdrop-filter: blur(6px) !important;
+      -webkit-backdrop-filter: blur(6px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    .modal-overlay.show {
+      display: flex !important;
+    }
+    .modal-overlay .modal {
+      margin: auto !important;
+      max-height: min(78vh, 640px) !important;
+      border-radius: 20px !important;
+      width: 100% !important;
+      max-width: 400px !important;
+      position: relative !important;
+      top: auto !important;
+      bottom: auto !important;
+      transform: none !important;
+      flex-shrink: 0 !important;
+    }
+    /* Полицейские баннеры — прилипают сверху, не внизу ленты */
+    #police-warning,
+    #jail-banner,
+    .police-alert {
+      position: sticky !important;
+      top: 4px !important;
+      z-index: 50 !important;
+    }
+
+  
+    /* Админ-вкладка никогда не в нижней панели */
+    #admin-tab,
+    .tab[data-tab="admin"] {
+      display: none !important;
+      width: 0 !important;
+      min-width: 0 !important;
+      max-width: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
   </style>
 </head>
 <body>
@@ -2008,7 +2082,7 @@
     <div class="tab" data-tab="leaderboard">🏅</div>
     <div class="tab" data-tab="friends">🤝</div>
     <div class="tab" data-tab="chat" id="tab-chat">💬<span class="tab-badge" id="chat-badge">0</span></div>
-    <div class="tab" data-tab="admin" id="admin-tab" style="display:none;">🛠</div>
+    <!-- admin tab removed from nav — open via 7 taps on profile ID -->
   </div>
 
   <div class="content">
@@ -2298,7 +2372,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.2-fix · 06.10';
+    const APP_VERSION = 'v5.9.4-admin · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -8095,7 +8169,8 @@
     }, 900);
     // Secret: 5 taps on XP badge
     const xpBadge = document.getElementById('xp-badge');
-    if (xpBadge) xpBadge.addEventListener('click', onAdminSecretTap);
+    // админ только через 7 тапов по ID в профиле (не по XP-бейджу)
+    // if (xpBadge) xpBadge.addEventListener('click', onAdminSecretTap);
 
     // ============================================================
     // ====== ЭКСПОРТЫ ======
@@ -8201,13 +8276,8 @@
     }
 
     function checkAdminSession() {
-      // Вкладка админа ВСЕГДА скрыта. Сессия только внутри после открытия секретным способом.
       try {
-        const tab = document.getElementById('admin-tab');
-        if (tab) tab.style.display = 'none';
-        if (sessionStorage.getItem('admin_ok') === '1') {
-          adminAuthed = true;
-        }
+        if (sessionStorage.getItem('admin_ok') === '1') adminAuthed = true;
       } catch(e) {}
     }
 
@@ -8223,8 +8293,6 @@
       }
     }
     function openAdminPanel() {
-      const tab = document.getElementById('admin-tab');
-      if (tab) tab.style.display = 'none'; // не показываем в нижней панели
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       const sec = document.getElementById('section-admin');
@@ -8254,8 +8322,6 @@
       document.querySelectorAll('.tab').forEach(t => {
         t.classList.toggle('active', t.getAttribute('data-tab') === 'profile');
       });
-      const tab = document.getElementById('admin-tab');
-      if (tab) tab.style.display = 'none';
     }
 
     function renderAdminForm() {
