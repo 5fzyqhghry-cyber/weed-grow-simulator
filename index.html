@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.06-v5913">
+  <meta name="app-version" content="2026.10.06-v5914">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2482,7 +2482,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.13 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.14 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2774,7 +2774,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.13-offline · 06.10';
+    const APP_VERSION = 'v5.9.14-sell · 06.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -2914,10 +2914,10 @@
     ];
 
     const PRODUCTS = {
-      dried: { name: 'Сушка', emoji: '🍂', mult: 1.25, energy: 3, from: 'raw', need: 1, drySec: 75 },
-      joint: { name: 'Косяк', emoji: '🚬', mult: 1.55, energy: 6, from: 'dried', need: 1, craftSec: 180 },
-      oil: { name: 'Масло', emoji: '🧴', mult: 1.9, energy: 10, from: 'dried', need: 2, craftSec: 600 },
-      edible: { name: 'Еда', emoji: '🍪', mult: 2.15, energy: 12, from: 'dried', need: 3, craftSec: 900 }
+      dried:  { name: 'Сушка', emoji: '🍂', mult: 1.25, energy: 3, from: 'raw',   need: 1, drySec: 60 },
+      joint:  { name: 'Косяк', emoji: '🚬', mult: 1.55, energy: 5, from: 'dried', need: 1, craftSec: 240 },
+      oil:    { name: 'Масло', emoji: '🧴', mult: 1.85, energy: 6, from: 'dried', need: 1, craftSec: 300 },
+      edible: { name: 'Еда',   emoji: '🍪', mult: 2.15, energy: 7, from: 'dried', need: 1, craftSec: 360 }
     };
     const DRY_MAX_SLOTS = 4;
     const CRAFT_MAX_SLOTS = 4;
@@ -5719,7 +5719,8 @@
         maxQty: amt,
         offers: offers
       };
-      sellQty = Math.min(1, amt);
+      if (!sellTarget || sellTarget.key !== key) sellQty = 1;
+      sellQty = Math.min(Math.max(1, sellQty || 1), amt);
 
       document.getElementById('sellTitle').textContent = '💰 Продажа: ' + info.name;
       document.getElementById('sellInfo').textContent =
@@ -5748,6 +5749,36 @@
 
       document.getElementById('sellQtyDisplay').textContent = sellQty;
       document.getElementById('sellModal').classList.add('show');
+      if (typeof updateSellSummary === 'function') updateSellSummary();
+    }
+
+        function updateSellSummary() {
+      if (!sellTarget) return;
+      const qty = Math.min(Math.max(1, sellQty || 1), sellTarget.maxQty || 1);
+      sellQty = qty;
+      const unit = sellTarget.price || 0;
+      let total = qty * unit;
+      if (typeof getSeasonEvent === 'function') {
+        const ev = getSeasonEvent();
+        if (ev && ev.sellBonus) total = Math.floor(total * ev.sellBonus);
+      }
+      const qd = document.getElementById('sellQtyDisplay');
+      const td = document.getElementById('sellTotalDisplay');
+      const ud = document.getElementById('sellUnitDisplay');
+      if (qd) qd.textContent = String(qty);
+      if (td) td.textContent = total.toLocaleString('ru-RU') + '$';
+      if (ud) {
+        const b = sellTarget.buyerId && typeof getBuyer === 'function' ? getBuyer(sellTarget.buyerId) : null;
+        ud.textContent = unit + '$ × ' + qty + ' шт.' + (b ? ' → ' + b.emoji + ' ' + b.name : ' · нажми на покупателя');
+      }
+      const box = document.getElementById('sell-buyers');
+      if (box) {
+        box.querySelectorAll('[data-buyer]').forEach(el => {
+          const on = el.getAttribute('data-buyer') === String(sellTarget.buyerId);
+          el.style.border = on ? '2px solid #d4b45c' : '1px solid rgba(160,175,145,0.2)';
+          el.style.background = on ? 'rgba(212,180,80,0.12)' : 'rgba(0,0,0,0.2)';
+        });
+      }
     }
 
     function selectSellBuyer(buyerId) {
@@ -5756,28 +5787,21 @@
       if (!offer) return;
       sellTarget.buyerId = buyerId;
       sellTarget.price = offer.price;
-      // перерисовать выделение
-      openSellModal(sellTarget.key);
-      sellQty = Math.min(sellQty, sellTarget.maxQty);
-      document.getElementById('sellQtyDisplay').textContent = sellQty;
+      updateSellSummary();
+      try { haptic('light'); } catch (e) {}
     }
-
 
     function changeSellQty(delta) {
       if (!sellTarget) return;
-      const newQty = Math.max(1, Math.min(sellTarget.maxQty, sellQty + delta));
-      sellQty = newQty;
-      document.getElementById('sellQtyDisplay').textContent = sellQty;
+      sellQty = Math.max(1, Math.min(sellTarget.maxQty, (sellQty || 1) + delta));
+      updateSellSummary();
     }
 
     function setSellQty(mode) {
       if (!sellTarget) return;
-      if (mode === 'max') {
-        sellQty = sellTarget.maxQty;
-      } else if (mode === 'half') {
-        sellQty = Math.max(1, Math.floor(sellTarget.maxQty / 2));
-      }
-      document.getElementById('sellQtyDisplay').textContent = sellQty;
+      if (mode === 'max') sellQty = sellTarget.maxQty;
+      else if (mode === 'half') sellQty = Math.max(1, Math.floor(sellTarget.maxQty / 2));
+      updateSellSummary();
     }
 
     function confirmSell() {
@@ -6969,31 +6993,41 @@
         const c = document.createElement('div');
         c.className = 'card';
         c.innerHTML = `
-              <div class="card-emoji">🍂</div>
-              <div class="card-info">
-                  <div class="card-title">${info.name} <span class="inv-count">×${amt}</span></div>
-                  <div class="card-desc">Переработка</div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
-                  <div style="font-size:9px;color:var(--hint);">🚬 Косяк 3м · 🧴 Масло 10м · 🍪 Еда 15м</div>
-                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
-                    <button class="btn btn-small" onclick="processItem('${sid}','joint',1)">🚬×1</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','joint',5)" ${amt < 5 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','joint',10)" ${amt < 10 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
-                    <button class="btn btn-small btn-gold" onclick="processMax('${sid}','joint')">MAX</button>
+              <div style="width:100%;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                  <div class="card-emoji" style="font-size:28px;">🍂</div>
+                  <div>
+                    <div class="card-title">${info.name} <span class="inv-count">×${amt}</span></div>
+                    <div class="card-desc">1 сушка = 1 продукт · 🚬4м · 🧴5м · 🍪6м</div>
                   </div>
-                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
-                    <button class="btn btn-small" onclick="processItem('${sid}','oil',1)">🧴×1</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','oil',5)" ${amt < 10 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','oil',10)" ${amt < 20 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
-                    <button class="btn btn-small btn-gold" onclick="processMax('${sid}','oil')">MAX</button>
+                </div>
+                <div class="craft-row">
+                  <div class="craft-row-label">🚬 Косяк · 4 мин · 1 сушка</div>
+                  <div class="craft-row-btns">
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','joint',1)">×1</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','joint',5)" ${amt < 5 ? 'disabled' : ''}>×5</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','joint',10)" ${amt < 10 ? 'disabled' : ''}>×10</button>
+                    <button type="button" class="btn btn-small btn-gold" onclick="processMax('${sid}','joint')">MAX</button>
                   </div>
-                  <div style="display:flex;gap:3px;flex-wrap:wrap;">
-                    <button class="btn btn-small" onclick="processItem('${sid}','edible',1)">🍪×1</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','edible',5)" ${amt < 15 ? 'disabled style="opacity:0.4"' : ''}>×5</button>
-                    <button class="btn btn-small" onclick="processItem('${sid}','edible',10)" ${amt < 30 ? 'disabled style="opacity:0.4"' : ''}>×10</button>
-                    <button class="btn btn-small btn-gold" onclick="processMax('${sid}','edible')">MAX</button>
+                </div>
+                <div class="craft-row">
+                  <div class="craft-row-label">🧴 Масло · 5 мин · 1 сушка</div>
+                  <div class="craft-row-btns">
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',1)">×1</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',5)" ${amt < 5 ? 'disabled' : ''}>×5</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',10)" ${amt < 10 ? 'disabled' : ''}>×10</button>
+                    <button type="button" class="btn btn-small btn-gold" onclick="processMax('${sid}','oil')">MAX</button>
                   </div>
+                </div>
+                <div class="craft-row">
+                  <div class="craft-row-label">🍪 Еда · 6 мин · 1 сушка</div>
+                  <div class="craft-row-btns">
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',1)">×1</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',5)" ${amt < 5 ? 'disabled' : ''}>×5</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',10)" ${amt < 10 ? 'disabled' : ''}>×10</button>
+                    <button type="button" class="btn btn-small btn-gold" onclick="processMax('${sid}','edible')">MAX</button>
+                  </div>
+                </div>
               </div>
           `;
         list.appendChild(c);
@@ -8976,6 +9010,8 @@
     window.changeSellQty = changeSellQty;
     window.setSellQty = setSellQty;
     window.confirmSell = confirmSell;
+    window.updateSellSummary = updateSellSummary;
+    window.selectSellBuyer = selectSellBuyer;
     window.closeSellModal = closeSellModal;
     window.processItem = processItem;
     window.consumeProduct = consumeProduct;
