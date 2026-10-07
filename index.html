@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.06-v5914">
+  <meta name="app-version" content="2026.10.07-v5915">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2482,7 +2482,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.14 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.15 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2774,7 +2774,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.14-sell · 06.10';
+    const APP_VERSION = 'v5.9.15-heatfix · 07.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -3521,11 +3521,15 @@
       _lastSaveAt = Date.now();
       try {
         state.lastUpdate = Date.now();
+        state.lastTick = state.lastTick || Date.now();
         state.money = Math.max(0, Math.floor(Number(state.money) || 0));
-        // Энергию не режем жёстко при сохранении старых сейвов — только отображение
         state.energy = Math.max(0, Number(state.energy) || 0);
         state.heat = Math.max(0, Math.min(100, Number(state.heat) || 0));
-        localStorage.setItem('grow_sim_v4_' + userId, JSON.stringify(state));
+        // не пишем в сейв флаги «уже применили оффлайн»
+        const toSave = Object.assign({}, state);
+        delete toSave._offlineDoneSession;
+        delete toSave.offlineApplied;
+        localStorage.setItem('grow_sim_v4_' + userId, JSON.stringify(toSave));
         if (state.registered) {
           const publicData = {
             money: state.money,
@@ -3544,10 +3548,23 @@
 
     // На закрытие мини-аппа — принудительный сейв
     try {
-      window.addEventListener('pagehide', function() { save(true); });
-      window.addEventListener('beforeunload', function() { save(true); });
+      window.addEventListener('pagehide', function() {
+        state.lastTick = Date.now();
+        state.lastUpdate = Date.now();
+        state.lastHeatCheck = Date.now();
+        save(true);
+      });
+      window.addEventListener('beforeunload', function() {
+        state.lastTick = Date.now();
+        state.lastUpdate = Date.now();
+        state.lastHeatCheck = Date.now();
+        save(true);
+      });
       document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
+          state.lastTick = Date.now();
+          state.lastUpdate = Date.now();
+          state.lastHeatCheck = Date.now();
           try { schedulePlantNotifications(); } catch (e) {}
           save(true);
         }
@@ -3561,6 +3578,8 @@
           const l = JSON.parse(raw);
           state = { ...state, ...l };
         }
+        delete state._offlineDoneSession;
+        delete state.offlineApplied;
       } catch (e) {}
 
       if (!state.pots || state.pots.length === 0) {
@@ -8518,24 +8537,36 @@
       if (reason) pushFeed && pushFeed(reason);
     }
 
-    function applyOfflineProgress() {
-      // один раз за сессию
-      if (state._offlineDoneSession) return;
-      state._offlineDoneSession = true;
+    // НЕ в state — иначе после save флаг залипает в localStorage и палево больше не падает
+    var _offlineAppliedThisPage = false;
 
-      const last = state.lastTick || state.lastUpdate || Date.now();
+    function applyOfflineProgress() {
+      if (_offlineAppliedThisPage) return;
+      _offlineAppliedThisPage = true;
+      // на всякий случай сбрасываем старый багованный флаг из сейва
+      try { delete state._offlineDoneSession; delete state.offlineApplied; } catch (e) {}
+
+      // Берём самый старый достоверный «уход» из игры
+      const candidates = [state.lastTick, state.lastUpdate, state.lastHeatCheck]
+        .map(Number)
+        .filter(t => t > 0 && t < Date.now() + 1000);
+      const last = candidates.length ? Math.min.apply(null, candidates) : Date.now();
       let dt = (Date.now() - last) / 1000;
       if (dt < 20) {
         state.lastTick = Date.now();
+        state.lastUpdate = Date.now();
+        state.lastHeatCheck = Date.now();
         return;
       }
       const fullDt = dt;
       dt = Math.min(dt, OFFLINE_CAP_SEC);
 
-      // —— Палево: −1% за каждую реальную минуту оффлайна ——
+      // —— Палево: −1% за каждую реальную минуту оффлайна (как в онлайне) ——
+      // 3 часа ≈ −180 → 0; для 18% через ~18 минут уже 0 — это нормально
+      const heatBefore = Math.floor(state.heat || 0);
       const heatDrop = Math.floor(fullDt / 60) * OFFLINE_HEAT_PER_MIN;
-      if (heatDrop > 0 && (state.heat || 0) > 0) {
-        state.heat = Math.max(0, (state.heat || 0) - heatDrop);
+      if (heatDrop > 0 && heatBefore > 0) {
+        state.heat = Math.max(0, heatBefore - heatDrop);
       }
 
       let grew = 0, readyN = 0, deadN = 0;
@@ -8616,7 +8647,14 @@
 
       // Запланировать пуши на сервере (если есть BOT_TOKEN)
       try { schedulePlantNotifications(); } catch (e) {}
+      // не сохраняем эпhemeral-флаги
+      try { delete state._offlineDoneSession; delete state.offlineApplied; } catch (e) {}
       save(true);
+      try {
+        const heatEl = document.getElementById('heat');
+        if (heatEl) heatEl.textContent = Math.floor(state.heat || 0);
+        if (typeof updateHeatHint === 'function') updateHeatHint();
+      } catch (e) {}
       if (typeof render === 'function') render();
     }
 
