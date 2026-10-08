@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.07-v5915">
+  <meta name="app-version" content="2026.10.08-v5916">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2271,6 +2271,11 @@
     /* старые .stats/.stat больше не ломают сетку */
     .header .stats { display: none !important; }
 
+  
+    .buyer-pick { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    #sellModal.show { z-index: 12000 !important; pointer-events: auto !important; }
+    #sell-buyers { pointer-events: auto !important; }
+    #sell-buyers .buyer-pick { pointer-events: auto !important; position: relative; z-index: 2; }
   </style>
 </head>
 <body>
@@ -2482,7 +2487,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.15 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.16 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2774,7 +2779,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.15-heatfix · 07.10';
+    const APP_VERSION = 'v5.9.16-bugs · 08.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -4462,9 +4467,10 @@
         if (!pot.isActive) return;
         if (!pot.strain) return;
 
-        if (isNight && pot.stage >= 2 && pot.stage < 5) {
-          return;
-        }
+        // Ночь: только замедляем рост (лампа помогает), вода/время не «замораживаются»
+        const nightSlow = (isNight && pot.stage >= 2 && pot.stage < 5)
+          ? (pot.lamp ? 0.55 : 0.25)
+          : 1;
 
         const potStats = getPotStats(pot);
         // Вода уходит быстрее — нужно следить
@@ -4485,7 +4491,7 @@
         pot.water = Math.max(0, pot.water - waterDrain * dt);
 
         // Накопительный рост (лампа/удобрения ускоряют, не откатывают)
-        advanceGrowth(pot, dt);
+        advanceGrowth(pot, dt * nightSlow);
 
         // Оценка ухода (для качества урожая)
         if (pot.careSamples == null) pot.careSamples = 0;
@@ -4810,6 +4816,11 @@
       pot.speedMult = 1;
       pot.yieldMult = 1;
       pot.thc = 0;
+      pot.growthProgress = 0;
+      pot.ripeAt = null;
+      pot.notifiedReady = false;
+
+      try { schedulePlantNotifications(); } catch (e) {}
 
       checkAchievements();
       save();
@@ -5754,15 +5765,19 @@
           const pref = (b.prefers || []).includes(strainId) ? ' ★' : '';
           const hate = (b.hates || []).includes(strainId) ? ' ✗' : '';
           const relLvl = getBuyerRelLevel(o.buyerId);
-          return `<div class="card" style="margin-bottom:4px;cursor:pointer;border:${selected ? '2px solid var(--gold)' : '1px solid transparent'};"
-            onclick="selectSellBuyer('${o.buyerId}')">
-            <div class="card-emoji">${b.emoji}</div>
-            <div class="card-info">
-              <div class="card-title">${b.name}${pref}${hate} <span style="font-size:9px;color:var(--gold);">Lv.${relLvl}</span></div>
-              <div class="card-desc">${(typeof getBuyerMoodName==='function' && getBuyerMoodName(b.id)) || b.mood} · ${b.desc}</div>
-            </div>
-            <div style="font-weight:700;color:var(--gold);font-size:13px;">${o.price}$</div>
-          </div>`;
+          const mood = (typeof getBuyerMoodName === 'function' && getBuyerMoodName(b.id)) || b.mood || '';
+          return `<button type="button" data-buyer="${o.buyerId}" class="buyer-pick"
+            style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:0 0 6px;padding:10px 12px;border-radius:12px;cursor:pointer;font:inherit;color:inherit;
+            border:${selected ? '2px solid #d4b45c' : '1px solid rgba(160,175,145,0.25)'};
+            background:${selected ? 'rgba(212,180,80,0.15)' : 'rgba(0,0,0,0.28)'};"
+            onclick="event.preventDefault();event.stopPropagation();selectSellBuyer('${String(o.buyerId)}')">
+            <span style="font-size:26px;line-height:1">${b.emoji}</span>
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font-weight:700;font-size:13px">${b.name}${pref}${hate} <span style="color:#d4b45c;font-size:10px">Lv.${relLvl}</span></span>
+              <span style="display:block;font-size:11px;opacity:.7">${mood} · ${b.desc || ''}</span>
+            </span>
+            <span style="font-weight:800;color:#ffe082;font-size:15px;white-space:nowrap">${o.price}$</span>
+          </button>`;
         }).join('') || '<div class="empty">Нет покупателей</div>';
       }
 
@@ -5793,18 +5808,19 @@
       const box = document.getElementById('sell-buyers');
       if (box) {
         box.querySelectorAll('[data-buyer]').forEach(el => {
-          const on = el.getAttribute('data-buyer') === String(sellTarget.buyerId);
-          el.style.border = on ? '2px solid #d4b45c' : '1px solid rgba(160,175,145,0.2)';
-          el.style.background = on ? 'rgba(212,180,80,0.12)' : 'rgba(0,0,0,0.2)';
+          const on = String(el.getAttribute('data-buyer')) === String(sellTarget.buyerId);
+          el.style.border = on ? '2px solid #d4b45c' : '1px solid rgba(160,175,145,0.25)';
+          el.style.background = on ? 'rgba(212,180,80,0.15)' : 'rgba(0,0,0,0.28)';
         });
       }
     }
 
     function selectSellBuyer(buyerId) {
       if (!sellTarget || !sellTarget.offers) return;
-      const offer = sellTarget.offers.find(o => o.buyerId === buyerId);
+      buyerId = String(buyerId);
+      const offer = sellTarget.offers.find(o => String(o.buyerId) === buyerId);
       if (!offer) return;
-      sellTarget.buyerId = buyerId;
+      sellTarget.buyerId = offer.buyerId;
       sellTarget.price = offer.price;
       updateSellSummary();
       try { haptic('light'); } catch (e) {}
@@ -6291,8 +6307,8 @@
       if (tier >= 4 && !state.policeActive && Math.random() < 0.004 * dayMult) {
         triggerPoliceEvent(tier);
       }
-      // 98%+ почти гарантированный арест если не в событии
-      if (tier >= 5 && !state.policeActive && Math.random() < 0.08) {
+      // 98%+ — гарантированный арест
+      if (tier >= 5 && !state.policeActive) {
         triggerPoliceEvent(5);
       }
 
@@ -6336,6 +6352,11 @@
         haptic('error');
       } else if (state.heat >= 80 && before < 4) {
         showToast('👮 Палево критическое!', true);
+      }
+      if (state.heat >= 98 && !state.policeActive && !isInJail()) {
+        setTimeout(function() {
+          if ((state.heat || 0) >= 98 && !state.policeActive && !isInJail()) triggerPoliceEvent(5);
+        }, 400);
       }
       save();
     }
@@ -7017,7 +7038,7 @@
                   <div class="card-emoji" style="font-size:28px;">🍂</div>
                   <div>
                     <div class="card-title">${info.name} <span class="inv-count">×${amt}</span></div>
-                    <div class="card-desc">1 сушка = 1 продукт · 🚬4м · 🧴5м · 🍪6м</div>
+                    <div class="card-desc">🚬1 сушка · 🧴2 · 🍪3 · время 4 / 8 / 12 мин</div>
                   </div>
                 </div>
                 <div class="craft-row">
@@ -7030,20 +7051,20 @@
                   </div>
                 </div>
                 <div class="craft-row">
-                  <div class="craft-row-label">🧴 Масло · 5 мин · 1 сушка</div>
+                  <div class="craft-row-label">🧴 Масло · 8 мин · 2 сушки</div>
                   <div class="craft-row-btns">
                     <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',1)">×1</button>
-                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',5)" ${amt < 5 ? 'disabled' : ''}>×5</button>
-                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',10)" ${amt < 10 ? 'disabled' : ''}>×10</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',5)" ${amt < 10 ? 'disabled' : ''}>×5</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','oil',10)" ${amt < 20 ? 'disabled' : ''}>×10</button>
                     <button type="button" class="btn btn-small btn-gold" onclick="processMax('${sid}','oil')">MAX</button>
                   </div>
                 </div>
                 <div class="craft-row">
-                  <div class="craft-row-label">🍪 Еда · 6 мин · 1 сушка</div>
+                  <div class="craft-row-label">🍪 Еда · 12 мин · 3 сушки</div>
                   <div class="craft-row-btns">
                     <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',1)">×1</button>
-                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',5)" ${amt < 5 ? 'disabled' : ''}>×5</button>
-                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',10)" ${amt < 10 ? 'disabled' : ''}>×10</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',5)" ${amt < 15 ? 'disabled' : ''}>×5</button>
+                    <button type="button" class="btn btn-small" onclick="processItem('${sid}','edible',10)" ${amt < 30 ? 'disabled' : ''}>×10</button>
                     <button type="button" class="btn btn-small btn-gold" onclick="processMax('${sid}','edible')">MAX</button>
                   </div>
                 </div>
@@ -7530,6 +7551,10 @@
     
     let _chatUnread = 0;
     let _lastChatSeen = 0;
+    try {
+      const v = localStorage.getItem('grow_chat_seen_' + userId);
+      if (v) _lastChatSeen = Number(v) || 0;
+    } catch (e) {}
     function setChatBadge(n) {
       _chatUnread = Math.max(0, n);
       const b = document.getElementById('chat-badge');
@@ -7544,6 +7569,7 @@
     function clearChatBadge() {
       setChatBadge(0);
       _lastChatSeen = Date.now();
+      try { localStorage.setItem('grow_chat_seen_' + userId, String(_lastChatSeen)); } catch (e) {}
     }
 
     function setChatMode(mode) {
@@ -7631,6 +7657,11 @@
           }
         }
         chatMessages = msgs;
+        // если «seen» ещё 0 — помечаем всё старое прочитанным (первый запуск)
+        if (!_lastChatSeen && msgs.length) {
+          _lastChatSeen = Math.max.apply(null, msgs.map(m => m.time || 0).concat([Date.now()]));
+          try { localStorage.setItem('grow_chat_seen_' + userId, String(_lastChatSeen)); } catch (e) {}
+        }
         renderChat();
       } catch (e) {
         chatMessages = [];
@@ -8519,7 +8550,7 @@
 
     /** Оффлайн: рост, палево, гибель перезрелых, очереди цеха */
     const OFFLINE_CAP_SEC = 12 * 3600;       // симулируем до 12ч
-    const RIPE_DIE_SEC = 90 * 60;            // 90 мин после готовности — куст гибнет
+    const RIPE_DIE_SEC = 3 * 3600;           // 3 часа на сбор после готовности
     const OFFLINE_HEAT_PER_MIN = 1;          // −1% палево / реальная минута оффлайн
 
     function clearPotPlantOffline(pot, reason) {
@@ -8579,9 +8610,9 @@
         const name = s ? (s.emoji + ' ' + s.name) : 'куст';
         const before = getProgress(p);
 
-        // Если уже был готов до выхода — считаем от ripeAt
+        // Уже готов — не ставим ripeAt в прошлое (иначе мгновенная гибель)
         if ((p.growthProgress || 0) >= 1 || before >= 1) {
-          if (!p.ripeAt) p.ripeAt = p.plantedAt ? (p.plantedAt + (s ? s.baseTime * 1000 : 0)) : last;
+          if (!p.ripeAt) p.ripeAt = last;
         }
 
         for (let i = 0; i < steps; i++) {
@@ -8606,17 +8637,14 @@
         const prog = getProgress(p);
         if (prog > before + 0.01) grew++;
 
-        // Готовность
+        // Готовность / гибель (окно 3 часа с момента ripeAt)
         if (prog >= 1) {
-          if (!p.ripeAt) p.ripeAt = Date.now() - Math.min(dt, fullDt) * 500; // приблизительно
+          if (!p.ripeAt) p.ripeAt = Date.now();
           readyN++;
-          // Гибель, если не собрали слишком долго
-          const ripeFor = (Date.now() - (p.ripeAt || Date.now())) / 1000;
-          // учитываем оффлайн: если ripeAt + RIPE_DIE < now
-          if (ripeFor >= RIPE_DIE_SEC || (p.ripeAt && Date.now() - p.ripeAt >= RIPE_DIE_SEC * 1000)) {
+          if ((Date.now() - p.ripeAt) / 1000 >= RIPE_DIE_SEC) {
             clearPotPlantOffline(p, '🥀 ' + name + ' погиб — не собрали вовремя');
             deadN++;
-            readyN--;
+            readyN = Math.max(0, readyN - 1);
           }
         }
       });
@@ -8669,21 +8697,21 @@
         if (!s) return;
         const prog = getProgress(p);
         if (prog >= 1) {
-          if (!p.notifiedReady) {
-            jobs.push({
-              potId: p.id,
-              strain: s.name,
-              emoji: s.emoji,
-              readyAt: now,
-              dieAt: now + RIPE_DIE_SEC * 1000,
-              type: 'ready'
-            });
-          }
+          if (p.notifiedReady) return;
+          p.notifiedReady = true;
+          jobs.push({
+            potId: p.id,
+            strain: s.name,
+            emoji: s.emoji,
+            readyAt: now,
+            dieAt: (p.ripeAt || now) + RIPE_DIE_SEC * 1000,
+            type: 'ready'
+          });
           return;
         }
-        // оценка времени до готовности
         const left = typeof getEffectiveTime === 'function' ? getEffectiveTime(p) : (s.baseTime * (1 - prog));
-        const readyAt = now + Math.max(5, left) * 1000;
+        if (!(left > 8)) return;
+        const readyAt = now + Math.max(15, left) * 1000;
         jobs.push({
           potId: p.id,
           strain: s.name,
@@ -8693,7 +8721,7 @@
           type: 'schedule'
         });
       });
-      if (!jobs.length) return;
+      // Пустой список тоже — сервер сбрасывает старые уведомления
       fetch((SERVER_URL || '') + '/api/notify/plants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -8707,7 +8735,10 @@
       let changed = false;
       (state.pots || []).forEach(p => {
         if (!p.strain || !p.plantedAt) return;
-        if (getProgress(p) < 1) return;
+        if (getProgress(p) < 1) {
+          if (p.ripeAt) p.ripeAt = null;
+          return;
+        }
         if (!p.ripeAt) p.ripeAt = now;
         if (now - p.ripeAt >= RIPE_DIE_SEC * 1000) {
           const s = getStrain(p.strain);
@@ -8717,7 +8748,11 @@
           changed = true;
         }
       });
-      if (changed) { save(true); if (typeof renderFarm === 'function') renderFarm(); }
+      if (changed) {
+        try { schedulePlantNotifications(); } catch (e) {}
+        save(true);
+        if (typeof renderFarm === 'function') renderFarm();
+      }
     }
 
     function pushFeed(text) {
