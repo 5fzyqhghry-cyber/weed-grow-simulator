@@ -1054,17 +1054,24 @@ app.post('/api/notify/plants', (req, res) => {
       return res.json({ success: false, error: 'need telegram id' });
     }
     const store = loadNotifies();
-    // заменяем очередь игрока
-    store[userId] = plants.slice(0, 30).map(p => ({
-      potId: p.potId,
-      strain: String(p.strain || '').slice(0, 40),
-      emoji: String(p.emoji || '🌿').slice(0, 8),
-      readyAt: Number(p.readyAt) || 0,
-      dieAt: Number(p.dieAt) || 0,
-      type: p.type || 'schedule',
-      sentReady: false,
-      sentDieWarn: false
-    }));
+    const prev = Array.isArray(store[userId]) ? store[userId] : [];
+    const prevMap = {};
+    prev.forEach(j => { if (j && j.potId != null) prevMap[String(j.potId)] = j; });
+    // заменяем очередь; сохраняем sent* чтобы не слать повторно
+    store[userId] = plants.slice(0, 30).map(p => {
+      const id = String(p.potId);
+      const old = prevMap[id] || {};
+      return {
+        potId: p.potId,
+        strain: String(p.strain || '').slice(0, 40),
+        emoji: String(p.emoji || '🌿').slice(0, 8),
+        readyAt: Number(p.readyAt) || 0,
+        dieAt: Number(p.dieAt) || 0,
+        type: p.type || 'schedule',
+        sentReady: !!old.sentReady,
+        sentDieWarn: !!old.sentDieWarn
+      };
+    });
     saveNotifies(store);
     res.json({ success: true, queued: store[userId].length, bot: !!BOT_TOKEN });
   } catch (e) {
