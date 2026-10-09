@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌿 Fermarast</title>
-  <meta name="app-version" content="2026.10.08-v5916">
+  <meta name="app-version" content="2026.10.08-v5918">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2487,7 +2487,7 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.16 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.18 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
@@ -2779,7 +2779,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.16-bugs · 08.10';
+    const APP_VERSION = 'v5.9.18-consistency · 08.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -2921,8 +2921,8 @@
     const PRODUCTS = {
       dried:  { name: 'Сушка', emoji: '🍂', mult: 1.25, energy: 3, from: 'raw',   need: 1, drySec: 60 },
       joint:  { name: 'Косяк', emoji: '🚬', mult: 1.55, energy: 5, from: 'dried', need: 1, craftSec: 240 },
-      oil:    { name: 'Масло', emoji: '🧴', mult: 1.85, energy: 6, from: 'dried', need: 1, craftSec: 300 },
-      edible: { name: 'Еда',   emoji: '🍪', mult: 2.15, energy: 7, from: 'dried', need: 1, craftSec: 360 }
+      oil:    { name: 'Масло', emoji: '🧴', mult: 2.10, energy: 8, from: 'dried', need: 2, craftSec: 480 },
+      edible: { name: 'Еда',   emoji: '🍪', mult: 2.60, energy: 10, from: 'dried', need: 3, craftSec: 720 }
     };
     const DRY_MAX_SLOTS = 4;
     const CRAFT_MAX_SLOTS = 4;
@@ -3252,6 +3252,11 @@
       pot.speedMult = 1;
       pot.yieldMult = 1;
       pot.thc = 0;
+      pot.growthProgress = 0;
+      pot.ripeAt = null;
+      pot.notifiedReady = false;
+      pot.pestType = null;
+      pot.pestTaps = 0;
       pot.lastTick = Date.now();
     }
     function getPotStats(pot) {
@@ -4457,7 +4462,10 @@
 
     function tickPots() {
       const now = Date.now();
-      const dt = (now - (state.lastTick || now)) / 1000;
+      // Не больше 3 сек за тик — иначе после свёртки убивает кусты одним кадром
+      let dt = (now - (state.lastTick || now)) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 3) dt = 3;
       state.lastTick = now;
 
       const weather = getWeatherMult();
@@ -4553,17 +4561,7 @@
             pot.pests = false;
             pot.pestLevel = 0;
             showToast('💀 Вредители уничтожили растение!', true);
-            pot.strain = null;
-            pot.plantedAt = null;
-            pot.stage = 0;
-            pot.disease = false;
-            pot.water = 80;
-            pot.health = 100;
-            pot.lamp = null;
-            pot.fert = null;
-            pot.speedMult = 1;
-            pot.yieldMult = 1;
-            pot.thc = 0;
+            clearPotPlant(pot);
             save();
             render();
             return;
@@ -4588,19 +4586,7 @@
               state.money += refund;
             }
           }
-          pot.strain = null;
-          pot.plantedAt = null;
-          pot.stage = 0;
-          pot.disease = false;
-          pot.pests = false;
-          pot.pestLevel = 0;
-          pot.water = 80;
-          pot.health = 100;
-          pot.lamp = null;
-          pot.fert = null;
-          pot.speedMult = 1;
-          pot.yieldMult = 1;
-          pot.thc = 0;
+          clearPotPlant(pot);
         }
         updatePotStage(pot);
         updateTHC(pot);
@@ -4688,11 +4674,21 @@
 
     function advanceGrowth(pot, dt) {
       if (!pot || !pot.strain || !pot.plantedAt) return;
-      if ((pot.growthProgress || 0) >= 1) { pot.growthProgress = 1; return; }
+      if ((pot.growthProgress || 0) >= 1) {
+        pot.growthProgress = 1;
+        if (!pot.ripeAt) pot.ripeAt = Date.now();
+        return;
+      }
       const s = getStrain(pot.strain);
       if (!s || !s.baseTime) return;
       const mult = getGrowthSpeedMult(pot);
-      pot.growthProgress = Math.min(1, (pot.growthProgress || 0) + (dt * mult) / s.baseTime);
+      const before = pot.growthProgress || 0;
+      pot.growthProgress = Math.min(1, before + (dt * mult) / s.baseTime);
+      if (before < 1 && pot.growthProgress >= 1) {
+        pot.growthProgress = 1;
+        pot.stage = 5;
+        if (!pot.ripeAt) pot.ripeAt = Date.now();
+      }
     }
 
     function getEffectiveTime(pot) {
@@ -4768,8 +4764,8 @@
 
       const prog = getProgress(pot);
       if (prog < 0.99) {
-        const left = getEffectiveTime(pot) - (Date.now() - pot.plantedAt) / 1000;
-        showToast('Растение ещё не выросло! Осталось: ' + formatTime(Math.max(0, left)), true);
+        const left = Math.max(0, getEffectiveTime(pot));
+        showToast('Растение ещё не выросло! Осталось: ' + formatTime(left), true);
         return;
       }
       if (pot.health < 20) { showToast('Растение слишком слабое!', true); return; }
@@ -5021,12 +5017,15 @@
       pot.pests = false;
       pot.pestLevel = 0;
       pot.growthProgress = 0;
+      pot.ripeAt = null;
+      pot.notifiedReady = false;
       pot.speedMult = 1 + (h.quality - 1) * 0.2;
       pot.yieldMult = 1 + (h.quality - 1) * 0.15;
       pot.lastTick = Date.now();
       pot.thc = h.thc * 0.5;
       closeModal('modal-seed');
       showToast('🧬 Посажен гибрид: ' + h.name);
+      try { schedulePlantNotifications(); } catch (e) {}
       haptic('medium');
       addXp(10);
       save();
@@ -5078,6 +5077,8 @@
       pot.speedMult = 1;
       pot.yieldMult = 1;
       pot.growthProgress = 0;
+      pot.ripeAt = null;
+      pot.notifiedReady = false;
       pot.lastTick = Date.now();
       pot.thc = 0;
       pot.careScore = 50;
@@ -5086,6 +5087,7 @@
       pot.isActive = true;
       closeModal('modal-seed');
       showToast('🌱 Посажено: ' + s.emoji + ' ' + s.name);
+      try { schedulePlantNotifications(); } catch (e) {}
       haptic('medium');
       addXp(3);
       addHeat(0.5);
@@ -5362,10 +5364,11 @@
         if (s || info) delete state.inventory[id];
       }
       addMoney(total);
-      showToast('💰 Продано за ' + total + '$');
+      showToast('💰 Продано за ' + total + '$ (рынок, без выбора покупателя)');
       haptic('success');
-      addXp(Math.floor(total / 10));
-      addHeat(total / 5);
+      addXp(Math.min(80, Math.floor(total / 15)));
+      // Палево с потолком — иначе «продать всё» сразу 100%
+      addHeat(Math.min(22, total / 40));
       save();
       render();
     }
@@ -5408,7 +5411,7 @@
           return {
             name: s2.emoji + ' ' + s2.name + ' косяк',
             emoji: '🚬',
-            sellPrice: Math.floor(s2.sellPrice * 1.9),
+            sellPrice: Math.floor(s2.sellPrice * (PRODUCTS.joint?.mult || 1.55) * 1.15),
             strain: sid,
             type: 'joint'
           };
@@ -5421,7 +5424,8 @@
           return {
             name: s2.emoji + ' ' + s2.name + ' масло',
             emoji: '🧴',
-            sellPrice: Math.floor(s2.sellPrice * 2.4 * 2),
+            // 2 сушки в 1 масло — цена выше двух косяков
+            sellPrice: Math.floor(s2.sellPrice * (PRODUCTS.oil?.mult || 2.1) * 1.35),
             strain: sid,
             type: 'oil'
           };
@@ -5434,7 +5438,7 @@
           return {
             name: s2.emoji + ' ' + s2.name + ' еда',
             emoji: '🍪',
-            sellPrice: Math.floor(s2.sellPrice * 2.8 * 3),
+            sellPrice: Math.floor(s2.sellPrice * (PRODUCTS.edible?.mult || 2.6) * 1.55),
             strain: sid,
             type: 'edible'
           };
@@ -5582,6 +5586,25 @@
       render();
     }
 
+    function processMax(strainId, productType) {
+      const p = PRODUCTS[productType];
+      if (!p) return;
+      if (productType === 'dried') {
+        const have = state.inventory[strainId] || 0;
+        if (have < 1) { showToast('Нет сырья', true); return; }
+        processItem(strainId, 'dried', have);
+        return;
+      }
+      const driedKey = strainId + '_dried';
+      const have = state.inventory[driedKey] || 0;
+      const need = p.need || 1;
+      const maxQty = Math.floor(have / need);
+      if (maxQty < 1) {
+        showToast('Нужна сушка ×' + need + ' (есть ' + have + ')', true);
+        return;
+      }
+      processItem(strainId, productType, maxQty);
+    }
 
     function getUnlockedBuyers() {
       const lvl = state.level || 1;
@@ -5655,6 +5678,27 @@
       return BUYERS.find(b => b.id === id);
     }
 
+    /** Дневное настроение покупателя: стабильно в течение игрового дня */
+    function _buyerMoodSeed(buyerId) {
+      const day = Math.floor((state.gameTime || 0) / 1440);
+      let h = 0;
+      const s = String(buyerId || '') + ':' + day;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    }
+    function getBuyerMoodMult(buyerId) {
+      const r = (_buyerMoodSeed(buyerId) % 1000) / 1000;
+      // 0.88 … 1.12
+      return 0.88 + r * 0.24;
+    }
+    function getBuyerMoodName(buyerId) {
+      const m = getBuyerMoodMult(buyerId);
+      if (m >= 1.08) return 'В ударе';
+      if (m >= 1.0) return 'Спокоен';
+      if (m >= 0.94) return 'Вялый';
+      return 'Жмот';
+    }
+
     function getBuyerPrice(buyerId, strainId, basePrice) {
       // mood day applied at end
       const __moodMult = (typeof getBuyerMoodMult === 'function') ? getBuyerMoodMult(buyerId) : 1;
@@ -5666,6 +5710,7 @@
       mult *= (1 + (relLvl - 1) * 0.03);
       if ((b.prefers || []).includes(strainId)) mult *= 1.2;
       if ((b.hates || []).includes(strainId)) mult *= 0.7;
+      mult *= (__moodMult || 1);
       return Math.max(1, Math.floor(basePrice * mult));
     }
 
@@ -9087,6 +9132,7 @@
     window.selectSellBuyer = selectSellBuyer;
     window.closeSellModal = closeSellModal;
     window.processItem = processItem;
+    window.processMax = processMax;
     window.consumeProduct = consumeProduct;
     window.shareReferral = shareReferral;
     window.loadReferralStats = loadReferralStats;
