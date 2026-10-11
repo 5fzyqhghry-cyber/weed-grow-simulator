@@ -2276,9 +2276,744 @@
     #sellModal.show { z-index: 12000 !important; pointer-events: auto !important; }
     #sell-buyers { pointer-events: auto !important; }
     #sell-buyers .buyer-pick { pointer-events: auto !important; position: relative; z-index: 2; }
+  
+    .retention-strip {
+      display: flex; flex-direction: column; gap: 6px;
+      margin-bottom: 8px; padding: 10px 12px;
+      background: linear-gradient(135deg, rgba(30,50,28,0.95), rgba(18,28,20,0.98));
+      border: 1px solid rgba(140,200,100,0.28);
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .retention-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: #d0e0c8;
+    }
+    .retention-row b { color: #ffe082; font-weight: 700; }
+    .retention-timers {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .ret-chip {
+      background: rgba(0,0,0,0.28); border-radius: 10px;
+      padding: 8px 10px; border: 1px solid rgba(160,180,140,0.12);
+    }
+    .ret-chip .lab { font-size: 10px; color: var(--hint); margin-bottom: 2px; }
+    .ret-chip .val { font-size: 14px; font-weight: 750; color: #c8f0a8; }
+    .ret-chip.urgent .val { color: #ff8a80; animation: pulse-urgent 1.2s ease infinite; }
+    .ret-chip.ready .val { color: #ffe082; }
+    @keyframes pulse-urgent {
+      0%,100% { opacity: 1; } 50% { opacity: 0.65; }
+    }
+    .streak-claim {
+      margin-top: 4px;
+    }
+    .streak-claim .btn { width: 100%; }
+
+    /* ========== 3D VISUAL UPGRADE ========== */
+    html { perspective: 1200px; }
+    body {
+      background:
+        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(120, 160, 100, 0.22), transparent 55%),
+        radial-gradient(ellipse 80% 50% at 80% 100%, rgba(40, 60, 30, 0.35), transparent 50%),
+        linear-gradient(165deg, #1a2a22 0%, #0c1410 40%, #08100c 100%) !important;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      left: -10%; right: -10%;
+      bottom: 0;
+      height: 42vh;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        linear-gradient(0deg, rgba(20,14,8,0.75) 0%, transparent 70%),
+        repeating-linear-gradient(90deg, transparent 0, transparent 28px, rgba(80,60,40,0.06) 28px, rgba(80,60,40,0.06) 29px);
+      transform: perspective(600px) rotateX(12deg);
+      transform-origin: center bottom;
+      opacity: 0.85;
+    }
+    #section-farm, .section { position: relative; z-index: 1; }
+
+    .hud-item, .hud-stat, .hud-chip {
+      background: linear-gradient(160deg, rgba(50,70,48,0.75), rgba(18,28,20,0.9)) !important;
+      border: 1px solid rgba(180, 210, 160, 0.22) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 20px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .card {
+      background: linear-gradient(155deg, rgba(42,58,44,0.92) 0%, rgba(22,32,24,0.96) 100%) !important;
+      border: 1px solid rgba(160,185,140,0.2) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset, 0 -2px 0 rgba(0,0,0,0.25) inset, 0 10px 24px rgba(0,0,0,0.4) !important;
+      transform: translateY(0);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      border-radius: 16px !important;
+    }
+    .card:active {
+      transform: translateY(2px) scale(0.985);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 10px rgba(0,0,0,0.35) !important;
+    }
+
+    .farm-grid {
+      perspective: 900px;
+      perspective-origin: 50% 20%;
+      gap: 14px !important;
+      padding: 8px 4px 20px !important;
+    }
+
+    .pot {
+      position: relative;
+      background: linear-gradient(180deg, rgba(55,72,52,0.5) 0%, rgba(25,35,28,0.95) 55%, rgba(18,22,16,0.98) 100%) !important;
+      border: 1px solid rgba(170,195,150,0.25) !important;
+      border-radius: 18px !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 -8px 16px rgba(0,0,0,0.35) inset, 0 14px 28px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.35) !important;
+      transform-style: preserve-3d;
+      transform: rotateX(4deg);
+      transition: transform 0.22s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.22s ease;
+      overflow: visible !important;
+    }
+    .pot::before {
+      content: '';
+      position: absolute;
+      left: 10%; right: 10%; top: -3px; height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #6a4a32, #3d2a1c);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      z-index: 0; opacity: 0.85; pointer-events: none;
+    }
+    .pot::after {
+      content: '';
+      position: absolute;
+      left: 12%; right: 12%; bottom: -10px; height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%);
+      z-index: -1; filter: blur(3px); pointer-events: none;
+    }
+    .pot:active { transform: rotateX(2deg) translateY(3px) scale(0.98) !important; }
+    .pot.ready {
+      box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 0 0 2px rgba(200,230,80,0.45), 0 0 28px rgba(180,230,60,0.35), 0 14px 28px rgba(0,0,0,0.45) !important;
+      animation: potReadyPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes potReadyPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.12); }
+    }
+    .pot .plant-container, .pot svg {
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,0.45)) drop-shadow(0 2px 2px rgba(40,80,20,0.3));
+    }
+    .pot-name, .pot-status { text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+    .btn {
+      background: linear-gradient(180deg, rgba(70,120,65,0.95) 0%, rgba(40,80,40,0.98) 100%) !important;
+      border: 1px solid rgba(160,200,140,0.28) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 -2px 0 rgba(0,0,0,0.25) inset, 0 6px 14px rgba(0,0,0,0.35) !important;
+      transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+    }
+    .btn:active {
+      transform: translateY(2px) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 2px 6px rgba(0,0,0,0.3) !important;
+    }
+    .btn-gold {
+      background: linear-gradient(180deg, #e8c56a 0%, #b8862e 55%, #8a6420 100%) !important;
+      color: #1a1208 !important;
+      border-color: rgba(255,230,150,0.4) !important;
+    }
+    .btn-secondary {
+      background: linear-gradient(180deg, rgba(45,55,48,0.95), rgba(25,32,28,0.98)) !important;
+    }
+    .btn-warning {
+      background: linear-gradient(180deg, #d4a030, #8a6010) !important;
+      color: #1a1000 !important;
+    }
+
+    .tabs, .bottom-nav, nav.tabs {
+      background: linear-gradient(180deg, rgba(28,40,30,0.92), rgba(12,18,14,0.97)) !important;
+      border-top: 1px solid rgba(160,190,140,0.2) !important;
+      box-shadow: 0 -1px 0 rgba(255,255,255,0.06) inset, 0 -12px 32px rgba(0,0,0,0.45) !important;
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    }
+    .tab.active {
+      filter: drop-shadow(0 0 8px rgba(140,220,100,0.45));
+      transform: translateY(-2px);
+    }
+
+    .modal-overlay {
+      backdrop-filter: blur(6px) brightness(0.7) !important;
+      -webkit-backdrop-filter: blur(6px) brightness(0.7) !important;
+      background: rgba(4, 8, 6, 0.55) !important;
+    }
+    .modal {
+      background: linear-gradient(165deg, rgba(40,55,42,0.98), rgba(16,24,18,0.99)) !important;
+      border: 1px solid rgba(170,200,150,0.25) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 24px 60px rgba(0,0,0,0.65) !important;
+      border-radius: 20px !important;
+    }
+
+    .retention-strip {
+      background: linear-gradient(155deg, rgba(36,52,34,0.95), rgba(14,22,16,0.98)) !important;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 10px 24px rgba(0,0,0,0.4) !important;
+    }
+    .bar, .quest-bar, .process-job-bar {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4) inset;
+      background: rgba(0,0,0,0.35) !important;
+      border-radius: 6px; overflow: hidden;
+    }
+    .bar-fill, .quest-bar > div { box-shadow: 0 0 8px rgba(140,220,100,0.35); }
+
+    .greenhouse-light {
+      background: radial-gradient(ellipse at 50% 0%, rgba(180,255,140,0.18), transparent 60%) !important;
+      mix-blend-mode: screen; pointer-events: none;
+    }
+    .section-title { text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+    .profile-hero {
+      background: linear-gradient(160deg, rgba(50,70,48,0.6), rgba(20,30,22,0.9)) !important;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.08) inset !important;
+      border-radius: 18px !important;
+    }
+    .profile-avatar {
+      box-shadow: 0 0 0 3px rgba(180,210,140,0.25), 0 8px 20px rgba(0,0,0,0.45) !important;
+    }
+
+
+    /* ========== 3D OBJECTS (pots, plants, UI) ========== */
+    .farm-grid {
+      perspective: 1100px !important;
+      perspective-origin: 50% 0% !important;
+    }
+    .pot {
+      transform: rotateX(8deg) rotateY(0deg) translateZ(0) !important;
+      transform-style: preserve-3d !important;
+      background:
+        linear-gradient(145deg, rgba(70,90,65,0.55) 0%, rgba(28,38,30,0.92) 40%, rgba(14,20,16,0.98) 100%) !important;
+      border-radius: 20px !important;
+      padding: 12px 10px 14px !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.12) inset,
+        0 -12px 24px rgba(0,0,0,0.4) inset,
+        0 18px 36px rgba(0,0,0,0.55),
+        0 6px 12px rgba(0,0,0,0.35) !important;
+    }
+    .pot:nth-child(odd) { transform: rotateX(8deg) rotateY(-2deg) !important; }
+    .pot:nth-child(even) { transform: rotateX(8deg) rotateY(2deg) !important; }
+    .pot:active {
+      transform: rotateX(4deg) translateY(4px) scale(0.97) !important;
+    }
+    .pot-3d-shell {
+      transform-style: preserve-3d;
+      position: relative;
+    }
+    .pot-3d-face {
+      transform: translateZ(8px);
+    }
+    .pot-emoji-3d {
+      font-size: 42px !important;
+      line-height: 1.1;
+      filter: drop-shadow(0 8px 10px rgba(0,0,0,0.45));
+      transform: translateZ(20px) scale(1.05);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .plant-container.pot-plant-3d {
+      min-height: 120px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      transform: translateZ(16px);
+      margin: 4px 0 6px;
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(40,60,30,0.35), transparent 70%);
+      border-radius: 12px;
+    }
+    .plant-container.pot-plant-3d svg,
+    .plant-svg-3d {
+      width: 100%;
+      max-width: 160px;
+      height: 130px;
+      filter:
+        drop-shadow(0 10px 12px rgba(0,0,0,0.5))
+        drop-shadow(0 2px 0 rgba(100,140,60,0.25));
+      transform: translateZ(24px);
+    }
+    .plant-body-3d {
+      /* лёгкое «дыхание» куста */
+      animation: plantSway 4.5s ease-in-out infinite;
+      transform-origin: 50px 78px;
+    }
+    @keyframes plantSway {
+      0%, 100% { transform: rotate(-1.2deg) scaleY(1); }
+      50% { transform: rotate(1.4deg) scaleY(1.02); }
+    }
+    .pot.ready .plant-body-3d {
+      animation: plantSway 2.8s ease-in-out infinite, plantGlow 2s ease-in-out infinite;
+    }
+    @keyframes plantGlow {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.15); }
+    }
+
+    /* Кнопки в горшке — объём */
+    .pot .btn {
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.2) inset,
+        0 6px 12px rgba(0,0,0,0.4) !important;
+      border-radius: 12px !important;
+    }
+    .pot .bars {
+      transform: translateZ(6px);
+      background: rgba(0,0,0,0.25);
+      border-radius: 10px;
+      padding: 6px 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3) inset;
+    }
+    .pot .bar {
+      height: 7px !important;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.5) inset;
+    }
+    .pot .bar-fill {
+      border-radius: 4px;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* Карточки магазина / склада — «плитки» */
+    .card {
+      transform: perspective(600px) rotateX(3deg) !important;
+      transform-style: preserve-3d;
+    }
+    .card .card-emoji {
+      font-size: 28px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+      transform: translateZ(12px);
+    }
+    .market-item {
+      background: linear-gradient(160deg, rgba(48,64,50,0.9), rgba(20,28,22,0.95)) !important;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.06) inset !important;
+      border-radius: 14px !important;
+      transform: perspective(500px) rotateX(2deg);
+    }
+
+    /* Нижние табы — иконки объёмнее */
+    .tab {
+      transform-style: preserve-3d;
+    }
+    .tab.active {
+      transform: translateY(-4px) scale(1.08) !important;
+      filter: drop-shadow(0 4px 10px rgba(140,220,100,0.5)) !important;
+    }
+
+    /* Модалка семян / продажи */
+    .modal {
+      transform: perspective(800px) rotateX(2deg) translateZ(30px) !important;
+    }
+    .modal-overlay.show .modal,
+    .modal-overlay.show .modal.show {
+      animation: modalPop 0.35s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    @keyframes modalPop {
+      from { transform: perspective(800px) rotateX(8deg) scale(0.9); opacity: 0; }
+      to { transform: perspective(800px) rotateX(2deg) scale(1); opacity: 1; }
+    }
+
+    /* HUD chips */
+    .hud-dashboard {
+      perspective: 800px;
+    }
+    .hud-dashboard > * {
+      transform: translateZ(4px);
+    }
+
+
+    /* ========== 3D BUTTONS + ANIMATION ========== */
+    .btn {
+      position: relative !important;
+      overflow: hidden !important;
+      isolation: isolate;
+      font-weight: 700 !important;
+      letter-spacing: 0.02em;
+      border-radius: 14px !important;
+      border: 1px solid rgba(200, 230, 180, 0.28) !important;
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,0.22) 0%,
+          rgba(255,255,255,0.06) 18%,
+          transparent 42%),
+        linear-gradient(180deg, #5a9a55 0%, #3d7a3c 48%, #2a5a2a 100%) !important;
+      color: #f5fff0 !important;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.35);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.35) inset,
+        0 -3px 0 rgba(0,0,0,0.28) inset,
+        0 8px 0 #1e3d1c,
+        0 12px 20px rgba(0,0,0,0.4) !important;
+      transform: translateY(0);
+      transition:
+        transform 0.12s cubic-bezier(0.34, 1.4, 0.64, 1),
+        box-shadow 0.12s ease,
+        filter 0.15s ease !important;
+      animation: btnIdle 3.2s ease-in-out infinite;
+    }
+    /* Блик, бегущий по кнопке */
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -60%;
+      width: 45%; height: 100%;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(255,255,255,0.28),
+        transparent);
+      transform: skewX(-20deg);
+      pointer-events: none;
+      z-index: 1;
+      animation: btnShine 4s ease-in-out infinite;
+    }
+    @keyframes btnShine {
+      0%, 55% { left: -60%; opacity: 0; }
+      60% { opacity: 1; }
+      75% { left: 120%; opacity: 0.9; }
+      100% { left: 120%; opacity: 0; }
+    }
+    @keyframes btnIdle {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.06); }
+    }
+    .btn:active,
+    .btn.btn-pressed {
+      transform: translateY(6px) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.2) inset,
+        0 -1px 0 rgba(0,0,0,0.2) inset,
+        0 2px 0 #1e3d1c,
+        0 4px 8px rgba(0,0,0,0.35) !important;
+      filter: brightness(0.95) !important;
+      animation: none !important;
+    }
+    .btn:active::before,
+    .btn.btn-pressed::before {
+      animation: none;
+      opacity: 0;
+    }
+    /* ripple-круг */
+    .btn::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 8px; height: 8px;
+      margin: -4px 0 0 -4px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+      transform: scale(0);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .btn:active::after {
+      animation: btnRipple 0.45s ease-out;
+    }
+    @keyframes btnRipple {
+      0% { transform: scale(0); opacity: 0.5; }
+      100% { transform: scale(22); opacity: 0; }
+    }
+
+    .btn-gold {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 20%, transparent 45%),
+        linear-gradient(180deg, #f0d078 0%, #d4a017 45%, #a67c00 100%) !important;
+      color: #1a1200 !important;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+      border-color: rgba(255, 230, 150, 0.55) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.5) inset,
+        0 -3px 0 rgba(80,50,0,0.35) inset,
+        0 8px 0 #6b4e00,
+        0 12px 22px rgba(0,0,0,0.4) !important;
+    }
+    .btn-gold:active {
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.3) inset,
+        0 2px 0 #6b4e00,
+        0 4px 8px rgba(0,0,0,0.35) !important;
+    }
+
+    .btn-secondary {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 30%),
+        linear-gradient(180deg, #3a4840 0%, #252e28 50%, #1a221c 100%) !important;
+      color: #e8f0e4 !important;
+      border-color: rgba(160,180,150,0.22) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.12) inset,
+        0 -3px 0 rgba(0,0,0,0.35) inset,
+        0 7px 0 #0e1410,
+        0 10px 18px rgba(0,0,0,0.4) !important;
+    }
+    .btn-secondary:active {
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.08) inset,
+        0 2px 0 #0e1410,
+        0 4px 8px rgba(0,0,0,0.35) !important;
+    }
+
+    .btn-warning {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 30%),
+        linear-gradient(180deg, #f0b040 0%, #d4890a 50%, #a06000 100%) !important;
+      color: #1a1000 !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.4) inset,
+        0 -3px 0 rgba(60,30,0,0.3) inset,
+        0 8px 0 #6b3d00,
+        0 12px 20px rgba(0,0,0,0.4) !important;
+    }
+    .btn-blue {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 30%),
+        linear-gradient(180deg, #6ab0d0 0%, #3a88a8 50%, #2a6080 100%) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.3) inset,
+        0 -3px 0 rgba(0,30,50,0.3) inset,
+        0 8px 0 #1a4058,
+        0 12px 20px rgba(0,0,0,0.4) !important;
+    }
+    .btn-purple {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 30%),
+        linear-gradient(180deg, #9b8ad0 0%, #6b5aa0 50%, #4a3a78 100%) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.25) inset,
+        0 -3px 0 rgba(30,10,50,0.35) inset,
+        0 8px 0 #2e2050,
+        0 12px 20px rgba(0,0,0,0.4) !important;
+    }
+    .btn-pink, .btn-police {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 30%),
+        linear-gradient(180deg, #e07070 0%, #c04040 50%, #902828 100%) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.25) inset,
+        0 -3px 0 rgba(50,0,0,0.35) inset,
+        0 8px 0 #5a1818,
+        0 12px 20px rgba(0,0,0,0.4) !important;
+    }
+
+    .btn-small {
+      border-radius: 11px !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.25) inset,
+        0 -2px 0 rgba(0,0,0,0.25) inset,
+        0 5px 0 rgba(0,0,0,0.35),
+        0 8px 14px rgba(0,0,0,0.3) !important;
+    }
+    .btn-small:active {
+      transform: translateY(4px) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.15) inset,
+        0 1px 0 rgba(0,0,0,0.3),
+        0 3px 6px rgba(0,0,0,0.3) !important;
+    }
+    .btn-full { width: 100%; }
+
+    .btn:disabled, .btn[disabled] {
+      opacity: 0.45 !important;
+      filter: grayscale(0.4) !important;
+      animation: none !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.1) inset,
+        0 3px 0 rgba(0,0,0,0.2) !important;
+      transform: none !important;
+    }
+    .btn:disabled::before, .btn[disabled]::before { animation: none; }
+
+    /* Появление кнопок при рендере секции */
+    .section.active .btn {
+      animation: btnIdle 3.2s ease-in-out infinite, btnEnter 0.4s cubic-bezier(0.34,1.4,0.64,1) backwards;
+    }
+    .section.active .btn:nth-child(1) { animation-delay: 0s, 0.02s; }
+    .section.active .btn:nth-child(2) { animation-delay: 0s, 0.06s; }
+    .section.active .btn:nth-child(3) { animation-delay: 0s, 0.1s; }
+    .section.active .btn:nth-child(4) { animation-delay: 0s, 0.14s; }
+    @keyframes btnEnter {
+      from { opacity: 0; transform: translateY(10px) scale(0.92); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+
+    /* ========== STABILITY FIX (после 3D) ========== */
+    /* Модалки: не ломаем центрирование transform'ом */
+    .modal-overlay {
+      display: none;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 9000 !important;
+      pointer-events: auto !important;
+    }
+    .modal-overlay.show {
+      display: flex !important;
+    }
+    .modal,
+    .modal-overlay .modal,
+    .modal-overlay.show .modal {
+      transform: none !important;
+      animation: none !important;
+      max-height: min(82vh, 640px) !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      margin: auto !important;
+    }
+    /* Полиция / Snoop — центр экрана */
+    #policeModal.modal-overlay,
+    #bribeModal.modal-overlay,
+    #sellModal.modal-overlay {
+      z-index: 12000 !important;
+    }
+    .snoop-popup {
+      transform: translate(-50%, -50%) !important;
+    }
+    .snoop-popup.show {
+      transform: translate(-50%, -50%) scale(1) !important;
+    }
+
+    /* Горшки: лёгкий объём без сильного rotate (ломал клики/клип) */
+    .farm-grid {
+      perspective: none !important;
+      overflow: visible !important;
+      padding-bottom: 28px !important;
+    }
+    .pot {
+      transform: none !important;
+      filter: none !important;
+      overflow: visible !important;
+      z-index: 1;
+      margin-bottom: 8px !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.1) inset,
+        0 10px 24px rgba(0,0,0,0.45),
+        0 4px 8px rgba(0,0,0,0.3) !important;
+    }
+    .pot:nth-child(odd),
+    .pot:nth-child(even),
+    .pot:active {
+      transform: none !important;
+    }
+    .pot:active {
+      filter: brightness(0.96) !important;
+    }
+    .pot.ready {
+      box-shadow:
+        0 0 0 2px rgba(200,230,80,0.5),
+        0 0 20px rgba(180,230,60,0.3),
+        0 10px 24px rgba(0,0,0,0.45) !important;
+      animation: potReadyPulse 2.4s ease-in-out infinite;
+    }
+    .pot::before {
+      /* не перекрываем контент */
+      pointer-events: none !important;
+      z-index: 0 !important;
+    }
+    .pot::after {
+      pointer-events: none !important;
+      z-index: 0 !important;
+    }
+    .plant-container,
+    .pot-plant-3d,
+    .pot .btn,
+    .pot-actions {
+      position: relative;
+      z-index: 2;
+      pointer-events: auto !important;
+    }
+    .plant-body-3d {
+      animation: plantSway 5s ease-in-out infinite;
+    }
+    @keyframes plantSway {
+      0%, 100% { transform: rotate(-0.8deg); }
+      50% { transform: rotate(0.8deg); }
+    }
+
+    /* Карточки без perspective (текст/клики стабильнее) */
+    .card, .market-item {
+      transform: none !important;
+    }
+    .card:active {
+      transform: scale(0.99) !important;
+    }
+
+    /* Кнопки: 3D остаётся, но без вечного «прыжка» секции */
+    .section.active .btn {
+      animation: btnIdle 3.5s ease-in-out infinite !important;
+    }
+    .btn {
+      z-index: 1;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .btn > * {
+      position: relative;
+      z-index: 3;
+    }
+    /* текст кнопки поверх блика */
+    .btn {
+      /* ensure label readable */
+    }
+
+    /* Нижняя панель всегда кликабельна */
+    .tabs {
+      z-index: 5000 !important;
+      pointer-events: auto !important;
+      transform: none !important;
+    }
+    .tab {
+      pointer-events: auto !important;
+    }
+    .tab.active {
+      transform: translateY(-2px) !important;
+    }
+
+    /* body::after пол — не перехватывает клики */
+    body::after {
+      pointer-events: none !important;
+      z-index: 0 !important;
+    }
+    body::before {
+      pointer-events: none !important;
+      z-index: 0 !important;
+    }
+    .greenhouse-light {
+      pointer-events: none !important;
+      z-index: 0 !important;
+    }
+    .header, .content, .section, #section-farm {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Toast поверх всего */
+    .toast, #toast {
+      z-index: 20000 !important;
+    }
+
+    /* Полоски не ломают layout */
+    .retention-strip {
+      transform: none !important;
+      position: relative;
+      z-index: 2;
+    }
+
   </style>
 </head>
 <body>
+  <div id="boot-loader" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0c1210;color:#c8e6c0;font-family:system-ui,sans-serif;">
+    <div style="font-size:40px;margin-bottom:12px;">🌿</div>
+    <div style="font-weight:700;font-size:16px;">Fermarast</div>
+    <div style="font-size:12px;opacity:0.6;margin-top:6px;">Загрузка…</div>
+  </div>
+
 
   <div class="snoop-overlay" id="snoopOverlay"></div>
   <div class="snoop-popup" id="snoopPopup">
@@ -2487,11 +3222,12 @@
   <div class="content">
     <div class="section active" id="section-farm">
       <div class="greenhouse-label">🌿 Теплица · поликарбонат · ряд A</div>
-      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.18 · если не видишь «⋯ Ещё» — это старый кэш</div>
+      <div id="build-badge" style="text-align:center;font-size:10px;font-weight:700;color:#7dffa0;margin:4px 0 8px;padding:4px 8px;background:rgba(110,200,120,0.12);border-radius:8px;border:1px solid rgba(110,200,120,0.25);">сборка v5.9.24 · если не видишь «⋯ Ещё» — это старый кэш</div>
       <div id="police-warning" style="display:none;" class="police-alert"></div>
       <div id="jail-banner" style="display:none;" class="police-alert">🔒 ТЫ В ТЮРЬМЕ. Жди окончания срока.</div>
       <div id="event-banner" class="event-banner" style="display:none;"></div>
       <div id="farm-hint" class="farm-hint" style="display:none;"></div>
+      <div id="retention-strip" class="retention-strip"></div>
       <div id="invest-crash-banner" class="crash-banner" style="display:none;">📉 Рыночный крах! Инвестиции не платят сегодня.</div>
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-small btn-blue" onclick="waterAllPots()">💧 Полить всё</button>
@@ -2779,7 +3515,7 @@
     // ====== НАСТРОЙКИ ======
     // ============================================================
     const BOT_USERNAME = 'Fermarast_bot';
-    const APP_VERSION = 'v5.9.18-consistency · 08.10';
+    const APP_VERSION = 'v5.9.24-stable · 11.10';
     const BALANCE = {
       HEAT: { PER_HARVEST: 0.9, FLOWER_NO_VENT: 0.04, FLOWER_READY: 0.06 },
       INVEST: { CRASH_CHANCE: 0.18 },
@@ -2792,8 +3528,34 @@
       ]
     };
     const SERVER_URL = '';  // same origin (игра + API на одном домене)
+
+    function getInitData() {
+      try {
+        return (tg && tg.initData) ? String(tg.initData) : '';
+      } catch (e) { return ''; }
+    }
+
+    async function apiFetch(path, options) {
+      options = options || {};
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+      const initData = getInitData();
+      if (initData) headers['X-Telegram-Init-Data'] = initData;
+      try {
+        const r = await fetch((SERVER_URL || '') + path, Object.assign({}, options, { headers }));
+        let data = null;
+        try { data = await r.json(); } catch (e) { data = null; }
+        if (!r.ok) {
+          const err = (data && data.error) || ('HTTP ' + r.status);
+          return { success: false, error: err, status: r.status, data };
+        }
+        return data != null ? data : { success: true };
+      } catch (e) {
+        console.warn('apiFetch', path, e);
+        return { success: false, error: 'offline', offline: true };
+      }
+    }
     const ADMIN_PASSWORD = 'admin420';  // пароль админки — смени при желании
-    const tg = window.Telegram?.WebApp;
+    const tg = (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
     let adminAuthed = false;
     let godMode = false;
     // QoL globals (must exist before any render)
@@ -2924,6 +3686,7 @@
       oil:    { name: 'Масло', emoji: '🧴', mult: 2.10, energy: 8, from: 'dried', need: 2, craftSec: 480 },
       edible: { name: 'Еда',   emoji: '🍪', mult: 2.60, energy: 10, from: 'dried', need: 3, craftSec: 720 }
     };
+    const RIPE_DIE_SEC = 3 * 3600; // 3ч окно сбора после готовности
     const DRY_MAX_SLOTS = 4;
     const CRAFT_MAX_SLOTS = 4;
 
@@ -3032,6 +3795,12 @@
       clanName: null,
       activityFeed: [],
       offlineApplied: false,
+      loginStreak: 0,
+      lastLoginDay: null,
+      streakClaimedDay: null,
+      totalLogins: 0,
+      longestStreak: 0,
+      lastComebackAt: 0,
 
       gameTime: 12 * 60,
       policeActive: false,
@@ -3210,6 +3979,15 @@
       osc.stop(now + 0.35);
     }
 
+
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     function formatTime(s) {
       if (s <= 0) return 'Готово!';
@@ -4346,16 +5124,40 @@
             L-4,8 C-8,8 -12,4 -12,0
             L-6,4 C-9,0 -10,-6 -8,-10
             L-4,-2 C-5,-8 -3,-14 0,-18 Z"
-            fill="${leaf}" stroke="${dark}" stroke-width="0.6"/>
-          <line x1="0" y1="-16" x2="0" y2="10" stroke="${dark}" stroke-width="0.7" opacity="0.5"/>
+            fill="${leaf}" stroke="${dark}" stroke-width="0.55"/>
+          <path d="M0,-16 C1.5,-12 2,-8 1.5,-3 L0,6" stroke="#e8f5e9" stroke-width="0.9" fill="none" opacity="0.35"/>
+          <line x1="0" y1="-16" x2="0" y2="10" stroke="${dark}" stroke-width="0.65" opacity="0.45"/>
+          <ellipse cx="-2" cy="-6" rx="2.2" ry="3.5" fill="#fff" opacity="0.12"/>
         </g>`;
       }
 
       function potBase() {
-        return `<ellipse cx="50" cy="92" rx="18" ry="4" fill="#3e2723" opacity="0.25"/>
-          <path d="M34,78 L36,90 Q50,94 64,90 L66,78 Z" fill="#5d4037"/>
-          <ellipse cx="50" cy="78" rx="16" ry="4" fill="#6d4c41"/>
-          <ellipse cx="50" cy="78" rx="13" ry="3" fill="#4e342e"/>`;
+        const uid = 'p' + Math.floor(Math.random() * 1e9);
+        return `
+          <defs>
+            <linearGradient id="${uid}b" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3e2723"/>
+              <stop offset="35%" stop-color="#8d6e63"/>
+              <stop offset="55%" stop-color="#a1887f"/>
+              <stop offset="100%" stop-color="#4e342e"/>
+            </linearGradient>
+            <linearGradient id="${uid}r" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#bcaaa4"/>
+              <stop offset="50%" stop-color="#6d4c41"/>
+              <stop offset="100%" stop-color="#3e2723"/>
+            </linearGradient>
+            <radialGradient id="${uid}s" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#5d4037"/>
+              <stop offset="100%" stop-color="#3e2723"/>
+            </radialGradient>
+          </defs>
+          <ellipse cx="50" cy="94" rx="22" ry="5" fill="#000" opacity="0.35"/>
+          <path d="M32,76 L34,91 Q50,97 66,91 L68,76 Z" fill="url(#${uid}b)" stroke="#2d1b14" stroke-width="0.6"/>
+          <path d="M34,76 L36,88 Q50,93 64,88 L66,76" fill="#5d4037" opacity="0.35"/>
+          <ellipse cx="50" cy="76" rx="18" ry="5.5" fill="url(#${uid}r)"/>
+          <ellipse cx="50" cy="76" rx="15" ry="4" fill="url(#${uid}s)"/>
+          <ellipse cx="44" cy="74.5" rx="3" ry="1.2" fill="#fff" opacity="0.12"/>
+        `;
       }
 
       let body = '';
@@ -4448,14 +5250,16 @@
       const thcMark = thcLevel > 5
         ? `<text x="50" y="12" font-size="7" text-anchor="middle" fill="#ce93d8" font-weight="700">${Math.round(thcLevel)}%</text>`
         : '';
+      const gid = 'g' + Math.floor(Math.random() * 1e9);
       const readyGlow = (ready || s >= 5)
-        ? `<circle cx="50" cy="40" r="28" fill="#cddc39" opacity="0.08"/>`
+        ? `<defs><radialGradient id="${gid}" cx="50%" cy="40%" r="55%"><stop offset="0%" stop-color="#f0ff8a" stop-opacity="0.4"/><stop offset="70%" stop-color="#c6ff00" stop-opacity="0.12"/><stop offset="100%" stop-color="#cddc39" stop-opacity="0"/></radialGradient></defs>
+           <circle cx="50" cy="42" r="34" fill="url(#${gid})"/>`
         : '';
 
-      return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      return `<svg class="plant-svg-3d" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         ${readyGlow}
         ${potBase()}
-        <g opacity="${hf}">${body}</g>
+        <g class="plant-body-3d" opacity="${hf}" style="transform-origin:50px 78px">${body}</g>
         ${pestMark}${sickMark}${thcMark}
       </svg>`;
     }
@@ -4826,8 +5630,11 @@
     // ============================================================
     // ====== ДЕЙСТВИЯ ======
     // ============================================================
+    let _waterLockUntil = 0;
     function waterPot(id) {
       if (typeof guardJailAction === "function" && guardJailAction()) return;
+      if (Date.now() < _waterLockUntil) return;
+      _waterLockUntil = Date.now() + 400;
       const pot = findPot(id) || state.pots.find(p => p.id === id);
       if (!pot || !pot.isActive) { showToast('Горшок неактивен', true); return; }
       if (!pot.strain) return;
@@ -6763,12 +7570,16 @@
           const ps = getPotStats(pot);
           const canUp = (pot.potLevel || 1) < 5;
           div.innerHTML = `
-                <div class="pot-emoji">${ps.emoji || '🪴'}</div>
-                <div class="pot-name">${ps.name || 'Горшок'}</div>
-                <div class="pot-status">Пустой · ур.${pot.potLevel || 1}</div>
-                <div style="font-size:9px;color:var(--hint);margin-bottom:4px;">${ps.desc || ''}</div>
-                <button class="btn btn-full" onclick="openSeedModal(${pot.id})">🌱 Посадить</button>
-                ${canUp ? `<button class="btn btn-small btn-secondary btn-full" style="margin-top:4px;" onclick="upgradePot(${pot.id})">⬆️ Улучшить</button>` : ''}
+                <div class="pot-3d-shell">
+                  <div class="pot-3d-face">
+                    <div class="pot-emoji pot-emoji-3d">${ps.emoji || '🪴'}</div>
+                    <div class="pot-name">${ps.name || 'Горшок'}</div>
+                    <div class="pot-status">Пустой · ур.${pot.potLevel || 1}</div>
+                    <div style="font-size:9px;color:var(--hint);margin-bottom:4px;">${ps.desc || ''}</div>
+                    <button class="btn btn-full" onclick="openSeedModal(${pot.id})">🌱 Посадить</button>
+                    ${canUp ? `<button class="btn btn-small btn-secondary btn-full" style="margin-top:4px;" onclick="upgradePot(${pot.id})">⬆️ Улучшить</button>` : ''}
+                  </div>
+                </div>
             `;
         } else {
           const s = getStrain(pot.strain);
@@ -6780,7 +7591,7 @@
           if (ready && !pot.ripeAt) pot.ripeAt = Date.now();
           let dieLeft = '';
           if (ready && pot.ripeAt) {
-            const leftDie = Math.max(0, Math.ceil((RIPE_DIE_SEC * 1000 - (Date.now() - pot.ripeAt)) / 1000));
+            const leftDie = Math.max(0, Math.ceil((((typeof RIPE_DIE_SEC!=='undefined'?RIPE_DIE_SEC:10800) * 1000) - (Date.now() - pot.ripeAt)) / 1000));
             dieLeft = leftDie > 0 ? (' · ⏳ гибель через ' + formatTime(leftDie)) : ' · 🥀 гибнет!';
           }
           let tags = '';
@@ -6821,7 +7632,7 @@
                 <div class="pot-name">${pot.isActive ? (s?.emoji + ' ' + s?.name + tags) : '🔒 Закрыт'}</div>
                 ${pot.isActive ? thcDisplay : ''}
                 <div class="pot-status">${pot.isActive ? (ready ? ('✅ Готово!' + (typeof dieLeft !== 'undefined' ? dieLeft : '')) : STAGE_NAMES[pot.stage] + ' · ' + formatTime(left)) : 'Недоступен'}</div>
-                ${pot.isActive ? `<div class="plant-container" style="cursor:pointer;touch-action:manipulation;" onclick="tapPlant(${pot.id})">${getPlantSVG(pot.strain, pot.stage, pot.health, pot.disease, ready, pot.pests ? (pot.pestType || true) : false, pot.thc, pot.water)}</div>` : ''}
+                ${pot.isActive ? `<div class="plant-container pot-plant-3d" style="cursor:pointer;touch-action:manipulation;" onclick="tapPlant(${pot.id})">${getPlantSVG(pot.strain, pot.stage, pot.health, pot.disease, ready, pot.pests ? (pot.pestType || true) : false, pot.thc, pot.water)}</div>` : ''}
                 ${pot.isActive ? `
                 <div class="bars">
                     <div class="bar-row"><span>💧</span><div class="bar"><div class="bar-fill water" style="width:${pot.water}%"></div></div></div>
@@ -7648,9 +8459,9 @@
             const isMe = String(p.id) === String(userId);
             return `<div class="friend-item" style="padding:8px 10px;">
               <span class="online-dot online"></span>
-              <span style="flex:1;font-weight:600;">${p.name}${isMe ? ' (ты)' : ''}</span>
+              <span style="flex:1;font-weight:600;">${escapeHtml(p.name)}${isMe ? ' (ты)' : ''}</span>
               <span style="font-size:10px;color:var(--hint);">Lv.${p.level || 1}</span>
-              ${!isMe ? `<button class="btn btn-small btn-secondary" onclick="openPmWith('${p.id}','${(p.name || '').replace(/'/g, '')}')">✉️</button>` : ''}
+              ${!isMe ? `<button class="btn btn-small btn-secondary" onclick="openPmWith('${escapeHtml(String(p.id))}','${escapeHtml(String(p.name || '')).replace(/'/g, '')}')">✉️</button>` : ''}
             </div>`;
           }).join('');
         fillPmSelect(list);
@@ -7695,7 +8506,7 @@
         const msgs = data.messages || [];
         const activeChat = document.querySelector('.tab[data-tab="chat"].active');
         if (!activeChat && msgs.length) {
-          const newest = Math.max.apply(null, msgs.map(m => m.time || 0).concat([0]));
+          const newest = Math.max.apply(null, msgs.map(m => /*esc*/ m.time || 0).concat([0]));
           if (newest > (_lastChatSeen || 0)) {
             const unread = msgs.filter(m => (m.time || 0) > (_lastChatSeen || 0) && String(m.from) !== String(userId)).length;
             if (unread > 0) setChatBadge((_chatUnread || 0) + unread > 0 ? unread : 1);
@@ -7704,7 +8515,7 @@
         chatMessages = msgs;
         // если «seen» ещё 0 — помечаем всё старое прочитанным (первый запуск)
         if (!_lastChatSeen && msgs.length) {
-          _lastChatSeen = Math.max.apply(null, msgs.map(m => m.time || 0).concat([Date.now()]));
+          _lastChatSeen = Math.max.apply(null, msgs.map(m => /*esc*/ m.time || 0).concat([Date.now()]));
           try { localStorage.setItem('grow_chat_seen_' + userId, String(_lastChatSeen)); } catch (e) {}
         }
         renderChat();
@@ -7784,9 +8595,9 @@
         const mine = String(msg.from) === String(userId);
         const t = msg.time ? new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         return `<div class="chat-message" style="margin-bottom:8px;${mine ? 'text-align:right;' : ''}">
-          <span class="sender" style="font-size:11px;font-weight:700;color:${mine ? 'var(--accent)' : 'var(--gold)'};">${mine ? 'Ты' : (msg.name || 'Игрок')}</span>
+          <span class="sender" style="font-size:11px;font-weight:700;color:${mine ? 'var(--accent)' : 'var(--gold)'};">${mine ? 'Ты' : escapeHtml(msg.name || 'Игрок')}</span>
           <span class="time" style="font-size:9px;color:var(--hint);margin-left:6px;">${t}</span>
-          <div style="font-size:13px;margin-top:2px;">${String(msg.text || '').replace(/</g, '&lt;')}</div>
+          <div style="font-size:13px;margin-top:2px;">${escapeHtml(msg.text || '')}</div>
         </div>`;
       }).join('');
       el.scrollTop = el.scrollHeight;
@@ -8161,12 +8972,17 @@
           if (r === userId) payload.referredBy = null;
         }
 
-        const response = await fetch(`${SERVER_URL}/api/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await response.json();
+        if (typeof getInitData === 'function') {
+          const idata = getInitData();
+          if (idata) payload.initData = idata;
+        }
+        const data = (typeof apiFetch === 'function')
+          ? await apiFetch('/api/register', { method: 'POST', body: JSON.stringify(payload) })
+          : await (await fetch(`${SERVER_URL}/api/register`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': getInitData() },
+              body: JSON.stringify(payload)
+            })).json();
         if (data && data.success) {
           state.registered = true;
           if (data.referredBy) {
@@ -8338,6 +9154,7 @@
         }
         tickPots();
         if (typeof checkRipeDeathOnline === 'function') checkRipeDeathOnline();
+        if (_tickN % 4 === 0 && typeof renderRetentionStrip === 'function') renderRetentionStrip();
         tickDryQueue();
         if (_tickN % 2 === 0) checkPests();
         updateMarketPrices();
@@ -8410,6 +9227,167 @@
       const d = new Date();
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
+
+
+    // ============================================================
+    // ====== УДЕРЖАНИЕ: стрик, таймеры, бонус возвращения ======
+    // ============================================================
+    function calendarDayId(ts) {
+      const d = new Date(ts || Date.now());
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    function yesterdayId() {
+      return calendarDayId(Date.now() - 86400000);
+    }
+    function streakReward(day) {
+      // День 1: 40$+10⚡ … растёт, плато на 7+
+      const n = Math.max(1, Math.min(30, day || 1));
+      const money = 30 + n * 25 + (n >= 7 ? 50 : 0) + (n >= 14 ? 100 : 0);
+      const energy = Math.min(40, 8 + n * 2);
+      return { money, energy };
+    }
+
+    function processLoginStreak() {
+      const today = calendarDayId();
+      if (state.lastLoginDay === today) return { kind: 'same' };
+      const yest = yesterdayId();
+      if (state.lastLoginDay === yest) {
+        state.loginStreak = (state.loginStreak || 0) + 1;
+      } else if (!state.lastLoginDay) {
+        state.loginStreak = 1;
+      } else {
+        // пропуск дня — сброс, но не обижаем тостом при первом заходе после обновления
+        const was = state.loginStreak || 0;
+        state.loginStreak = 1;
+        if (was >= 2) {
+          setTimeout(() => showToast('😢 Серия сброшена (было ' + was + ' дн.). Начни снова!', true), 900);
+        }
+      }
+      state.lastLoginDay = today;
+      state.totalLogins = (state.totalLogins || 0) + 1;
+      if ((state.loginStreak || 0) > (state.longestStreak || 0)) {
+        state.longestStreak = state.loginStreak;
+      }
+      save(true);
+      return { kind: 'new', streak: state.loginStreak };
+    }
+
+    function canClaimStreak() {
+      const today = calendarDayId();
+      return state.lastLoginDay === today && state.streakClaimedDay !== today && (state.loginStreak || 0) >= 1;
+    }
+
+    function claimStreakBonus() {
+      if (!canClaimStreak()) {
+        showToast(state.streakClaimedDay === calendarDayId() ? 'Сегодня уже забрал 🎁' : 'Зайди завтра', true);
+        return;
+      }
+      const r = streakReward(state.loginStreak || 1);
+      state.money = Math.floor(state.money || 0) + r.money;
+      state.energy = Math.min(state.maxEnergy || 100, (state.energy || 0) + r.energy);
+      state.streakClaimedDay = calendarDayId();
+      showToast('🔥 Серия ' + state.loginStreak + ' дн.! +' + r.money + '$ · +' + r.energy + '⚡');
+      haptic('success');
+      if (typeof playSfx === 'function') playSfx('ok');
+      if (typeof pushFeed === 'function') pushFeed('Серия ' + state.loginStreak + ' дней');
+      save();
+      renderRetentionStrip();
+      if (typeof render === 'function') render();
+    }
+
+    function getNextReadyInfo() {
+      let best = null;
+      (state.pots || []).forEach(p => {
+        if (!p.strain || !p.plantedAt) return;
+        const prog = typeof getProgress === 'function' ? getProgress(p) : 0;
+        const s = getStrain(p.strain);
+        const name = s ? (s.emoji + ' ' + s.name) : 'Куст';
+        if (prog >= 1) {
+          const dieWin = (typeof RIPE_DIE_SEC !== 'undefined' ? RIPE_DIE_SEC : 10800);
+          const leftDie = p.ripeAt ? Math.max(0, dieWin - (Date.now() - p.ripeAt) / 1000) : dieWin;
+          const item = { kind: 'ready', name, left: leftDie, potId: p.id };
+          if (!best || best.kind !== 'ready' || item.left < best.left) best = item;
+          return;
+        }
+        const left = typeof getEffectiveTime === 'function' ? getEffectiveTime(p) : 9999;
+        const item = { kind: 'grow', name, left: Math.max(0, left), potId: p.id };
+        if (!best || (best.kind !== 'ready' && item.left < best.left)) best = item;
+      });
+      return best;
+    }
+
+    function getEnergyFullLeftSec() {
+      const e = state.energy || 0;
+      const max = state.maxEnergy || 100;
+      if (e >= max - 0.5) return 0;
+      // тик ~0.18/сек в интервале 1.5с ≈ 0.12/сек средн.
+      const rate = 0.12;
+      return Math.ceil((max - e) / rate);
+    }
+
+    function formatRetTime(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      if (sec < 60) return sec + 'с';
+      if (sec < 3600) return Math.floor(sec / 60) + 'м ' + (sec % 60) + 'с';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return h + 'ч ' + m + 'м';
+    }
+
+    function renderRetentionStrip() {
+      const el = document.getElementById('retention-strip');
+      if (!el) return;
+      const streak = state.loginStreak || 0;
+      const nextR = streakReward(streak || 1);
+      const can = canClaimStreak();
+      const info = getNextReadyInfo();
+      const enLeft = getEnergyFullLeftSec();
+
+      let chipA = '', chipB = '';
+      if (info && info.kind === 'ready') {
+        const urgent = info.left < 30 * 60;
+        chipA = `<div class="ret-chip ready${urgent ? ' urgent' : ''}">
+          <div class="lab">✨ Готово к сбору</div>
+          <div class="val">${info.name}</div>
+          <div class="lab">${urgent ? '⚠ погибнет через ' : 'окно сбора: '}${formatRetTime(info.left)}</div>
+        </div>`;
+      } else if (info) {
+        chipA = `<div class="ret-chip">
+          <div class="lab">🌱 Ближайший урожай</div>
+          <div class="val">${formatRetTime(info.left)}</div>
+          <div class="lab">${info.name}</div>
+        </div>`;
+      } else {
+        chipA = `<div class="ret-chip"><div class="lab">🌱 Ферма</div><div class="val">Посади куст</div></div>`;
+      }
+      chipB = `<div class="ret-chip">
+        <div class="lab">⚡ Энергия полная</div>
+        <div class="val">${enLeft <= 0 ? 'Готово' : formatRetTime(enLeft)}</div>
+        <div class="lab">${Math.floor(state.energy || 0)}/${state.maxEnergy || 100}</div>
+      </div>`;
+
+      el.innerHTML = `
+        <div class="retention-row">🔥 Серия: <b>${streak} дн.</b>
+          ${streak > 0 ? '· завтра +' + streakReward(streak + 1).money + '$' : '· зайди завтра для серии'}
+          ${state.longestStreak ? ' · рекорд ' + state.longestStreak : ''}
+        </div>
+        <div class="retention-timers">${chipA}${chipB}</div>
+        ${can ? `<div class="streak-claim"><button type="button" class="btn btn-gold" onclick="claimStreakBonus()">🎁 Забрать бонус дня (+${nextR.money}$ · +${nextR.energy}⚡)</button></div>` : ''}
+      `;
+    }
+
+    function applyComebackBonus(offlineSec) {
+      if (offlineSec < 25 * 60) return null; // от 25 мин
+      if (Date.now() - (state.lastComebackAt || 0) < 6 * 3600 * 1000) return null; // не чаще 6ч
+      const hours = Math.min(12, offlineSec / 3600);
+      const money = Math.floor(15 + hours * 12);
+      const energy = Math.min(25, Math.floor(5 + hours * 2));
+      state.money = Math.floor(state.money || 0) + money;
+      state.energy = Math.min(state.maxEnergy || 100, (state.energy || 0) + energy);
+      state.lastComebackAt = Date.now();
+      return { money, energy, hours: Math.floor(hours * 10) / 10 };
+    }
+
 
     function ensureDailyQuests() {
       const d = dayId();
@@ -8595,7 +9573,6 @@
 
     /** Оффлайн: рост, палево, гибель перезрелых, очереди цеха */
     const OFFLINE_CAP_SEC = 12 * 3600;       // симулируем до 12ч
-    const RIPE_DIE_SEC = 3 * 3600;           // 3 часа на сбор после готовности
     const OFFLINE_HEAT_PER_MIN = 1;          // −1% палево / реальная минута оффлайн
 
     function clearPotPlantOffline(pot, reason) {
@@ -8716,7 +9693,13 @@
       if (grew > 0) msg += ' · рост ×' + grew;
       if (readyN > 0) msg += ' · готово ' + readyN;
       if (deadN > 0) msg += ' · погибло ' + deadN;
+      let comeback = null;
+      try { comeback = applyComebackBonus(fullDt); } catch (e) {}
+      if (comeback) msg += ' · 🎁 +' + comeback.money + '$ +' + comeback.energy + '⚡';
       if (mins >= 1) showToast(msg + (deadN > 0 ? ' — собирай вовремя!' : ''), deadN > 0);
+      if (readyN > 0 && deadN === 0) {
+        setTimeout(() => showToast('✨ Урожай ждёт на ферме — не дай завянуть!'), 1200);
+      }
 
       // Запланировать пуши на сервере (если есть BOT_TOKEN)
       try { schedulePlantNotifications(); } catch (e) {}
@@ -8948,6 +9931,8 @@
     }
 
     window.claimQuest = claimQuest;
+    window.claimStreakBonus = claimStreakBonus;
+    window.renderRetentionStrip = renderRetentionStrip;
     window.claimWeeklyGoal = claimWeeklyGoal;
     window.waterAllPots = waterAllPots;
     window.createClan = createClan;
@@ -9044,12 +10029,41 @@
       }
     }
 
+    try {
+      const bl = document.getElementById('boot-loader');
+      if (bl) { bl.style.opacity = '0'; bl.style.transition = 'opacity .35s'; setTimeout(() => bl.remove(), 400); }
+    } catch (e) {}
+    try { if (tg && typeof tg.ready === 'function') tg.ready(); if (tg && typeof tg.expand === 'function') tg.expand(); } catch (e) {}
+    
+    (function bindBtn3d() {
+      function down(e) {
+        const b = e.target.closest && e.target.closest('.btn');
+        if (b && !b.disabled) b.classList.add('btn-pressed');
+      }
+      function up() {
+        document.querySelectorAll('.btn.btn-pressed').forEach(b => b.classList.remove('btn-pressed'));
+      }
+      document.addEventListener('touchstart', down, { passive: true });
+      document.addEventListener('mousedown', down);
+      document.addEventListener('touchend', up);
+      document.addEventListener('mouseup', up);
+      document.addEventListener('touchcancel', up);
+    })();
+
     console.log('Fermarast ' + APP_VERSION);
     try {
       if (typeof applyOfflineProgress === 'function') applyOfflineProgress();
+      if (typeof processLoginStreak === 'function') processLoginStreak();
       if (typeof ensureDailyQuests === 'function') ensureDailyQuests();
       if (typeof ensureWeeklyGoal === 'function') ensureWeeklyGoal();
+      if (typeof renderRetentionStrip === 'function') renderRetentionStrip();
       setTimeout(function(){ if (typeof startTutorialIfNeeded === 'function') startTutorialIfNeeded(); }, 700);
+      // мягкий пуш: незабранный стрик
+      setTimeout(function(){
+        if (typeof canClaimStreak === 'function' && canClaimStreak()) {
+          showToast('🔥 Бонус серии дня ждёт на ферме!');
+        }
+      }, 2500);
     } catch (e) { console.log(e); }
 
     handleReferral();
